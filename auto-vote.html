@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>자동 찬반 투표</title>
+</head>
+<body>
+  <h2>자동 의견 제출 중...</h2>
+  <iframe id="voteFrame" width="100%" height="600px" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+
+  <script>
+    const links = [
+      "https://pal.assembly.go.kr/napal/lgsltpa/forInsert.do?lgsltPaId=AAA&vote=agree",
+      "https://pal.assembly.go.kr/napal/lgsltpa/forInsert.do?lgsltPaId=BBB&vote=disagree"
+    ];
+
+    let current = 0;
+    const iframe = document.getElementById('voteFrame');
+
+    function injectScript() {
+      const script = document.createElement('script');
+      script.src = 'https://alfms1.github.io/against-bad-law/Bad-Law.js';
+      iframe.contentWindow.document.body.appendChild(script);
+    }
+
+    function loadNext() {
+      if (current >= links.length) {
+        alert("모든 법안 의견 제출 완료!");
+        return;
+      }
+
+      iframe.onload = () => {
+        setTimeout(() => injectScript(), 1500);
+      };
+
+      iframe.src = links[current++];
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.data === 'vote_done') loadNext();
+    });
+
+    loadNext();
+  </script>
+</body>
+</html>
