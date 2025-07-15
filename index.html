@@ -1,13 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>Against-Bad-Law</title>
+  <title>법안 찬반 버튼 북마클릿</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 16px;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      margin-top: 16px;
+    }
+    code {
+      background: #eee;
+      padding: 4px 8px;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border-radius: 6px;
+    }
+  </style>
 </head>
-<body style="display:none;">
-  <!-- 자동 실행 중 -->
-  
-  <!-- ✅ JS는 HTML 본문이 다 만들어진 뒤에 실행되도록 아래에 둡니다 -->
-  <script src="./Bad-Law.js"></script>
+<body>
+
+  <h2>🔖 국회 법안 찬반 버튼 북마클릿 등록 안내</h2>
+
+  <p>이 페이지는 북마클릿(Bookmarklet)을 등록하기 위한 안내 페이지입니다.</p>
+
+  <ol>
+    <li><b>아래 코드를 꾹 눌러 전체 복사하세요</b></li>
+    <li><b>브라우저 즐겨찾기(북마크)에 붙여넣기로 저장</b>하세요</li>
+    <li>국회 법안 페이지에 들어간 후, 북마클릿을 실행하면 <b>찬성/반대 버튼</b>이 뜹니다</li>
+  </ol>
+
+  <h3>📋 북마클릿 코드</h3>
+  <code id="bookmarklet">
+javascript:(function(){
+  var s=document.createElement('script');
+  s.src='https://<b style="color:red">yourusername</b>.github.io/<b style="color:red">your-repo</b>/Bad-Law.js';
+  document.body.appendChild(s);
+})();
+  </code>
+
+  <p>※ 위의 <code>yourusername</code>과 <code>your-repo</code>는 GitHub 주소에 맞게 수정되어야 합니다.</p>
+
 </body>
 </html>
