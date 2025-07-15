@@ -1,4 +1,14 @@
-(() => {
+// ==UserScript==
+// @name         Vote Assistant
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  찬성/반대 버튼
+// @match        https://pal.asseㄱmbly.go.kr/napal/lgsltpa/lgsltpaOpn/*
+// @grant        none
+// ==/UserScript==
+
+document.addEventListener('DOMContentLoaded', () => {
+
   const STORAGE_KEY = 'voteFormButtonPosition';
   const BUTTON_SIZE = 48;
   const BUTTON_SPACING = 16;
@@ -129,4 +139,6 @@
       return DEFAULT_POSITION;
     }
   }
-})();
+
+});
+
