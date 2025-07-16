@@ -289,37 +289,82 @@
   function startOpinionProcess(selectedBills, titleInput, contentInput) {
     let currentIndex = 0;
     
-    // 북마클릿 코드 생성
+    // 🔧 수정된 북마클릿 코드 (이중 인코딩 문제 해결)
     const bookmarkletCode = `javascript:(function(){
       console.log('🎯 자동 의견 입력 시작');
       
       const urlParams = new URLSearchParams(location.search);
-      const autoTitle = decodeURIComponent(urlParams.get('autoTitle') || '${encodeURIComponent(titleInput)}');
-      const autoContent = decodeURIComponent(urlParams.get('autoContent') || '${encodeURIComponent(contentInput)}');
+      let autoTitle = urlParams.get('autoTitle') || '';
+      let autoContent = urlParams.get('autoContent') || '';
+      
+      // 이중 인코딩 문제 해결
+      try {
+        autoTitle = decodeURIComponent(autoTitle);
+      } catch(e) {
+        console.log('제목 디코딩 오류:', e);
+      }
+      
+      try {
+        autoContent = decodeURIComponent(autoContent);
+      } catch(e) {
+        console.log('내용 디코딩 오류:', e);
+      }
+      
+      console.log('제목:', autoTitle);
+      console.log('내용:', autoContent);
       
       function fillForm() {
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         const captchaField = document.querySelector('#catpchaAnswer');
         
-        if (titleField) {
+        if (titleField && autoTitle) {
           titleField.value = autoTitle;
           titleField.dispatchEvent(new Event('input', { bubbles: true }));
+          console.log('✅ 제목 입력 완료');
         }
         
-        if (contentField) {
+        if (contentField && autoContent) {
           contentField.value = autoContent;
           contentField.dispatchEvent(new Event('input', { bubbles: true }));
+          console.log('✅ 내용 입력 완료');
         }
         
         if (captchaField) {
           captchaField.focus();
           captchaField.style.border = '3px solid #ff4444';
+          console.log('✅ 캡차 포커스');
         }
         
         const notification = document.createElement('div');
-        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; z-index: 10000; font-family: Arial, sans-serif; box-shadow: 0 8px 25px rgba(0,0,0,0.2); min-width: 300px;';
-        notification.innerHTML = '<div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">🎯 자동 입력 완료!</div><div style="font-size: 13px; opacity: 0.9; line-height: 1.4;"><div><strong>제목:</strong> ' + autoTitle + '</div><div style="margin-top: 5px;"><strong>내용:</strong> ' + autoContent.substring(0, 50) + (autoContent.length > 50 ? '...' : '') + '</div></div><div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누른 후 <strong>창을 닫아주세요</strong></div><button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>';
+        notification.style.cssText = \`
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 12px;
+          z-index: 10000;
+          font-family: Arial, sans-serif;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+          min-width: 300px;
+        \`;
+        
+        notification.innerHTML = \`
+          <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+            🎯 자동 입력 완료!
+          </div>
+          <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
+            <div><strong>제목:</strong> \${autoTitle}</div>
+            <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
+            ⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누르세요!
+          </div>
+          <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
+        \`;
+        
         document.body.appendChild(notification);
       }
       
@@ -329,7 +374,7 @@
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         
-        if (titleField && contentField) {
+        if (titleField && contentField && autoTitle && autoContent) {
           fillForm();
         } else if (attempts < 30) {
           setTimeout(tryFill, 300);
@@ -389,29 +434,26 @@
       
       const bill = selectedBills[currentIndex];
       
-      // 🎯 올바른 URL 생성 (autoTitle, autoContent 파라미터)
+      // 🔧 수정된 URL 생성 (이중 인코딩 문제 해결)
       const baseUrl = bill.link;
       const url = new URL(baseUrl);
-      url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-      url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+      url.searchParams.set('autoTitle', titleInput);
+      url.searchParams.set('autoContent', contentInput);
       const fullUrl = url.toString();
       
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
       
-      window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
+      const win = window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      // 창이 닫히면 다음으로 진행
-      const checkNext = () => {
-        if (confirm('현재 창에서 의견 등록을 완료했습니까?')) {
+      // 🔧 수정된 창 닫힘 감지 (confirm 팝업 제거)
+      const checkClosed = setInterval(() => {
+        if (win.closed) {
+          clearInterval(checkClosed);
           currentIndex++;
-          setTimeout(openNext, 500);
-        } else {
-          setTimeout(checkNext, 2000);
+          setTimeout(openNext, 1000);
         }
-      };
-      
-      setTimeout(checkNext, 3000);
+      }, 500);
     };
 
     document.body.appendChild(statusDiv);
