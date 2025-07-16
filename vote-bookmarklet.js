@@ -1,178 +1,343 @@
 (() => {
-  console.log('Bad-Law.js 스크립트 시작...');
+  console.log('스크립트 시작...');
   
-  // URL에서 opinion 파라미터 확인 (Y=찬성, N=반대)
-  const opinionParam = new URLSearchParams(location.search).get("opinion");
-  const agree = opinionParam === "Y";
-  const isValid = opinionParam === "Y" || opinionParam === "N";
-  
-  console.log('URL 파라미터 opinion:', opinionParam, '찬성여부:', agree, '유효성:', isValid);
-  
-  if (!isValid) {
-    console.log('유효하지 않은 opinion 파라미터 - 기본 스크립트 종료');
+  // 1. 오늘 마감된 행들을 더 정확하게 찾기
+  const todayRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
+    const redSpan = tr.querySelector('td span.red');
+    const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
+    if (isToday) {
+      console.log('오늘 마감 법안 발견:', tr.querySelector('.content .t')?.textContent);
+    }
+    return isToday;
+  });
+
+  console.log(`총 ${todayRows.length}개의 오늘 마감 법안을 찾았습니다.`);
+
+  if (!todayRows.length) {
+    alert('오늘 마감된 법안이 없습니다.');
     return;
   }
 
-  function fillForm() {
-    console.log('폼 자동 입력 시작...');
-    
-    // 제목 입력
-    const sj = document.querySelector('#txt_sj');
-    if (sj) {
-      sj.value = agree ? '찬성합니다' : '반대합니다';
-      console.log('제목 입력 완료:', sj.value);
-    } else {
-      console.log('제목 입력란을 찾을 수 없습니다 (#txt_sj)');
-    }
-    
-    // 내용 입력
-    const cn = document.querySelector('#txt_cn');
-    if (cn) {
-      cn.value = agree ? '이 법률안을 찬성합니다.' : '이 법률안을 반대합니다.';
-      console.log('내용 입력 완료:', cn.value);
-    } else {
-      console.log('내용 입력란을 찾을 수 없습니다 (#txt_cn)');
-    }
-    
-    // 캡차 입력란에 포커스
-    const input = document.querySelector('#catpchaAnswer');
-    if (input) {
-      input.focus();
-      console.log('캡차 입력란에 포커스 설정');
-    } else {
-      console.log('캡차 입력란을 찾을 수 없습니다 (#catpchaAnswer)');
-      
-      // 다른 가능한 캡차 입력란 찾기
-      const altInputs = document.querySelectorAll('input[type="text"]');
-      console.log('찾은 텍스트 입력란들:', altInputs.length);
-      altInputs.forEach((inp, idx) => {
-        console.log(`입력란 ${idx}:`, inp.id, inp.name, inp.placeholder);
-      });
-    }
-  }
-
-  function createButtons() {
-    // 기존 버튼이 있으면 제거
-    const existing = document.querySelector('#vote-assistant-buttons');
-    if (existing) existing.remove();
-    
-    const wrap = document.createElement('div');
-    wrap.id = 'vote-assistant-buttons';
-    Object.assign(wrap.style, {
-      position: 'fixed',
-      top: '20px',
-      left: '20px',
-      zIndex: '9999',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-      background: 'white',
-      padding: '15px',
-      border: '2px solid #333',
-      borderRadius: '8px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-    });
-
-    const statusBtn = document.createElement('button');
-    statusBtn.textContent = agree ? '✅ 찬성 자동입력됨' : '❌ 반대 자동입력됨';
-    statusBtn.style.cssText = `
-      padding: 10px 15px;
-      background: ${agree ? '#2e7d32' : '#c62828'};
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 14px;
-    `;
-
-    const retryBtn = document.createElement('button');
-    retryBtn.textContent = '🔄 다시 입력';
-    retryBtn.style.cssText = `
-      padding: 8px 12px;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    `;
-    retryBtn.onclick = () => {
-      fillForm();
-      console.log('수동으로 다시 입력 실행');
-    };
-
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '✖ 닫기';
-    closeBtn.style.cssText = `
-      padding: 8px 12px;
-      background: #666;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    `;
-    closeBtn.onclick = () => wrap.remove();
-
-    wrap.appendChild(statusBtn);
-    wrap.appendChild(retryBtn);
-    wrap.appendChild(closeBtn);
-    document.body.appendChild(wrap);
-    
-    console.log('버튼 생성 완료');
-  }
-
-  function waitAndFill() {
-    console.log('페이지 로딩 대기 중...');
-    
-    let attempts = 0;
-    const maxAttempts = 20; // 최대 10초 대기
-    
-    const checkAndFill = () => {
-      attempts++;
-      console.log(`시도 ${attempts}/${maxAttempts}`);
-      
-      const sj = document.querySelector('#txt_sj');
-      const cn = document.querySelector('#txt_cn');
-      
-      if (sj && cn) {
-        console.log('입력란 발견! 자동 입력 시작');
-        fillForm();
-        createButtons();
-        return;
-      }
-      
-      if (attempts < maxAttempts) {
-        setTimeout(checkAndFill, 500);
-      } else {
-        console.log('최대 시도 횟수 초과. 수동으로 입력해주세요.');
-        createButtons(); // 버튼은 생성
-      }
-    };
-    
-    checkAndFill();
-  }
-
-  // 페이지 상태에 따라 다른 방식으로 실행
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitAndFill);
-  } else {
-    waitAndFill();
-  }
-
-  // 추가 안전장치: window.onload 이벤트
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      console.log('window.onload 이벤트에서 재시도');
-      const sj = document.querySelector('#txt_sj');
-      if (sj && !sj.value) {
-        fillForm();
-      }
-      if (!document.querySelector('#vote-assistant-buttons')) {
-        createButtons();
-      }
-    }, 1000);
+  // 2. 컨트롤 패널 생성
+  const controlPanel = document.createElement('div');
+  controlPanel.id = 'vote-control-panel';
+  Object.assign(controlPanel.style, {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    width: '350px',
+    maxHeight: '80vh',
+    overflowY: 'auto',
+    background: 'white',
+    border: '2px solid #333',
+    borderRadius: '8px',
+    padding: '15px',
+    zIndex: '10000',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    fontFamily: 'Arial, sans-serif',
+    fontSize: '14px'
   });
 
-  console.log('Bad-Law.js 초기화 완료');
+  // 3. 헤더
+  const header = document.createElement('div');
+  header.innerHTML = `
+    <h3 style="margin: 0 0 15px 0; color: #333;">오늘 마감 법안 (${todayRows.length}건)</h3>
+    <div style="margin-bottom: 15px;">
+      <button id="select-all-agree" style="padding: 5px 10px; margin-right: 5px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 찬성</button>
+      <button id="select-all-disagree" style="padding: 5px 10px; margin-right: 5px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 반대</button>
+      <button id="clear-all" style="padding: 5px 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">초기화</button>
+    </div>
+  `;
+  controlPanel.appendChild(header);
+
+  // 4. 각 법안별 컨트롤 생성
+  const billsList = document.createElement('div');
+  const bills = [];
+
+  todayRows.forEach((tr, index) => {
+    const titleElement = tr.querySelector('.content .t');
+    const voteLink = tr.querySelector('a[href*="forInsert.do"]');
+    
+    if (!titleElement || !voteLink) {
+      console.warn('필요한 요소를 찾을 수 없습니다:', tr);
+      return;
+    }
+
+    const title = titleElement.textContent.trim();
+    const shortTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
+
+    const billItem = document.createElement('div');
+    billItem.style.cssText = `
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #f9f9f9;
+    `;
+
+    billItem.innerHTML = `
+      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px; line-height: 1.3;">
+        ${shortTitle}
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="vote-btn agree" data-index="${index}" style="padding: 4px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">찬성</button>
+        <button class="vote-btn disagree" data-index="${index}" style="padding: 4px 12px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">반대</button>
+        <span class="vote-status" data-index="${index}" style="margin-left: 8px; font-weight: bold; font-size: 12px;">미선택</span>
+      </div>
+    `;
+
+    billsList.appendChild(billItem);
+
+    bills.push({
+      title: title,
+      link: voteLink.href,
+      vote: null,
+      element: billItem
+    });
+  });
+
+  controlPanel.appendChild(billsList);
+
+  // 5. 실행 버튼들
+  const actionButtons = document.createElement('div');
+  actionButtons.innerHTML = `
+    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">선택한 법안에 투표하기</button>
+      <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
+      <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
+        새 창에서 제목/내용이 자동 입력됩니다.<br>
+        캡차만 입력하고 의견을 등록한 후 창을 닫아주세요.
+      </div>
+    </div>
+  `;
+  controlPanel.appendChild(actionButtons);
+
+  document.body.appendChild(controlPanel);
+
+  // 6. 이벤트 리스너들
+  
+  // 개별 투표 버튼
+  controlPanel.addEventListener('click', (e) => {
+    if (e.target.classList.contains('vote-btn')) {
+      const index = parseInt(e.target.dataset.index);
+      const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
+      
+      bills[index].vote = voteType;
+      
+      const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
+      statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
+      statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
+
+      // 같은 법안의 다른 버튼들 스타일 업데이트
+      const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
+      const buttons = billDiv.querySelectorAll('.vote-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = btn === e.target ? '1' : '0.5';
+      });
+    }
+  });
+
+  // 전체 선택 버튼들
+  document.getElementById('select-all-agree').onclick = () => {
+    bills.forEach((bill, index) => {
+      bill.vote = 'agree';
+      const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
+      statusSpan.textContent = '찬성';
+      statusSpan.style.color = '#2e7d32';
+      
+      const billDiv = bill.element;
+      const buttons = billDiv.querySelectorAll('.vote-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = btn.classList.contains('agree') ? '1' : '0.5';
+      });
+    });
+  };
+
+  document.getElementById('select-all-disagree').onclick = () => {
+    bills.forEach((bill, index) => {
+      bill.vote = 'disagree';
+      const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
+      statusSpan.textContent = '반대';
+      statusSpan.style.color = '#c62828';
+      
+      const billDiv = bill.element;
+      const buttons = billDiv.querySelectorAll('.vote-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = btn.classList.contains('disagree') ? '1' : '0.5';
+      });
+    });
+  };
+
+  document.getElementById('clear-all').onclick = () => {
+    bills.forEach((bill, index) => {
+      bill.vote = null;
+      const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
+      statusSpan.textContent = '미선택';
+      statusSpan.style.color = '#666';
+      
+      const billDiv = bill.element;
+      const buttons = billDiv.querySelectorAll('.vote-btn');
+      buttons.forEach(btn => {
+        btn.style.opacity = '1';
+      });
+    });
+  };
+
+  // 패널 닫기
+  document.getElementById('close-panel').onclick = () => {
+    controlPanel.remove();
+  };
+
+  // 7. 투표 실행 (여기만 수정!)
+  document.getElementById('start-voting').onclick = () => {
+    const selectedBills = bills.filter(bill => bill.vote !== null);
+    
+    if (!selectedBills.length) {
+      alert('선택된 법안이 없습니다.');
+      return;
+    }
+
+    if (!confirm(`${selectedBills.length}개 법안에 투표하시겠습니까?`)) {
+      return;
+    }
+
+    let currentIndex = 0;
+    const statusDiv = document.createElement('div');
+    statusDiv.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 2px solid #333;
+      padding: 20px;
+      border-radius: 8px;
+      z-index: 10001;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    `;
+    
+    const updateStatus = () => {
+      statusDiv.innerHTML = `
+        <h4>투표 진행 중...</h4>
+        <p>진행률: ${currentIndex}/${selectedBills.length}</p>
+        <p>현재: ${selectedBills[currentIndex]?.title.substring(0, 50)}...</p>
+        <button onclick="this.parentElement.remove()">취소</button>
+      `;
+    };
+
+    const openNext = () => {
+      if (currentIndex >= selectedBills.length) {
+        statusDiv.innerHTML = `
+          <h4>✅ 모든 투표가 완료되었습니다!</h4>
+          <p>총 ${selectedBills.length}개 법안에 투표했습니다.</p>
+          <button onclick="this.parentElement.remove()">확인</button>
+        `;
+        return;
+      }
+
+      updateStatus();
+      
+      const bill = selectedBills[currentIndex];
+      // URL 파라미터 수정: ?vote=agree 또는 ?vote=disagree 형태로 전달
+      const separator = bill.link.includes('?') ? '&' : '?';
+      const fullUrl = `${bill.link}${separator}vote=${bill.vote}`;
+      
+      console.log(`${currentIndex + 1}번째 투표:`, bill.title, `(${bill.vote})`);
+      console.log('열리는 URL:', fullUrl);
+      
+      const win = window.open(fullUrl, `vote_${currentIndex}`, 'width=1200,height=800');
+      
+      // 새 창에 자동 입력 스크립트 주입 시도
+      setTimeout(() => {
+        try {
+          if (win && !win.closed) {
+            const script = win.document.createElement('script');
+            script.textContent = `
+              (() => {
+                const voteParam = new URLSearchParams(location.search).get("vote");
+                const agree = voteParam === "agree";
+                const isValid = voteParam === "agree" || voteParam === "disagree";
+                
+                console.log('자동 입력 스크립트 실행:', voteParam, agree, isValid);
+                
+                if (!isValid) return;
+
+                function fillForm() {
+                  const sj = document.querySelector('#txt_sj');
+                  const cn = document.querySelector('#txt_cn');
+                  const input = document.querySelector('#catpchaAnswer');
+                  
+                  if (sj) {
+                    sj.value = agree ? '찬성합니다' : '반대합니다';
+                    console.log('제목 입력 완료:', sj.value);
+                  }
+                  if (cn) {
+                    cn.value = agree ? '이 법률안을 찬성합니다.' : '이 법률안을 반대합니다.';
+                    console.log('내용 입력 완료:', cn.value);
+                  }
+                  if (input) {
+                    input.focus();
+                    console.log('캡차 입력란에 포커스');
+                  }
+                }
+
+                function createNotice() {
+                  const notice = document.createElement('div');
+                  notice.style.cssText = \`
+                    position: fixed;
+                    top: 20px;
+                    left: 20px;
+                    background: \${agree ? '#4caf50' : '#f44336'};
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                    z-index: 9999;
+                    font-weight: bold;
+                  \`;
+                  notice.textContent = agree ? '✅ 찬성으로 자동 입력됨' : '❌ 반대로 자동 입력됨';
+                  document.body.appendChild(notice);
+                }
+
+                let attempts = 0;
+                const waitAndFill = () => {
+                  attempts++;
+                  const sj = document.querySelector('#txt_sj');
+                  const cn = document.querySelector('#txt_cn');
+                  
+                  if (sj && cn) {
+                    fillForm();
+                    createNotice();
+                  } else if (attempts < 20) {
+                    setTimeout(waitAndFill, 500);
+                  }
+                };
+
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', waitAndFill);
+                } else {
+                  waitAndFill();
+                }
+              })();
+            `;
+            win.document.head.appendChild(script);
+          }
+        } catch (e) {
+          console.log('스크립트 주입 실패 (CORS 제한):', e);
+        }
+      }, 2000);
+      
+      const checkClosed = setInterval(() => {
+        if (win.closed) {
+          clearInterval(checkClosed);
+          currentIndex++;
+          setTimeout(openNext, 1000); // 1초 대기 후 다음 진행
+        }
+      }, 500);
+    };
+
+    document.body.appendChild(statusDiv);
+    openNext();
+  };
+
+  console.log('스크립트 설정 완료. 우측 상단의 패널을 확인하세요.');
 })();
