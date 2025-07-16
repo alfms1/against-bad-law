@@ -270,11 +270,18 @@ javascript:(function() {
           timestamp: Date.now()
         }));
         
-        // 각 법안의 링크를 순차적으로 열기 (새 창으로 변경)
+        // 각 법안의 링크를 순차적으로 새 탭으로 열기
         selectedBills.forEach((bill, index) => {
           setTimeout(() => {
             console.log(`${index + 1}번째 법안 열기:`, bill.title);
-            window.open(bill.link, '_blank'); // 팝업 대신 새 창으로
+            // 새 탭으로 열기 (팝업 차단 우회)
+            const link = document.createElement('a');
+            link.href = bill.link;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           }, index * 1000); // 1초 간격으로 열기
         });
         
