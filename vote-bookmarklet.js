@@ -123,6 +123,9 @@ javascript:(function() {
     controlPanel.appendChild(actionButtons);
     document.body.appendChild(controlPanel);
 
+    // 마지막 선택 추적 변수
+    let lastSelectedVote = null;
+
     // 6. 이벤트 리스너들
     
     // 개별 투표 버튼
@@ -132,6 +135,8 @@ javascript:(function() {
         const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
         
         bills[index].vote = voteType;
+        lastSelectedVote = voteType; // 마지막 선택 저장
+        console.log('마지막 선택:', lastSelectedVote);
         
         const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
         statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
@@ -147,6 +152,9 @@ javascript:(function() {
 
     // 전체 선택 버튼들
     document.getElementById('select-all-agree').onclick = () => {
+      lastSelectedVote = 'agree'; // 전체 찬성 선택시
+      console.log('전체 찬성 선택, 마지막 선택:', lastSelectedVote);
+      
       bills.forEach((bill, index) => {
         bill.vote = 'agree';
         const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
@@ -162,6 +170,9 @@ javascript:(function() {
     };
 
     document.getElementById('select-all-disagree').onclick = () => {
+      lastSelectedVote = 'disagree'; // 전체 반대 선택시
+      console.log('전체 반대 선택, 마지막 선택:', lastSelectedVote);
+      
       bills.forEach((bill, index) => {
         bill.vote = 'disagree';
         const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
@@ -177,6 +188,9 @@ javascript:(function() {
     };
 
     document.getElementById('clear-all').onclick = () => {
+      lastSelectedVote = null; // 초기화시 마지막 선택도 초기화
+      console.log('초기화, 마지막 선택:', lastSelectedVote);
+      
       bills.forEach((bill, index) => {
         bill.vote = null;
         const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
@@ -508,3 +522,5 @@ javascript:(function() {
     alert('이 북마클릿은 VForKorea와 국회 의견 등록 사이트에서만 작동합니다.');
   }
 })();
+
+//자동
