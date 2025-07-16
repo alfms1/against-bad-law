@@ -316,6 +316,12 @@ bill.vote = null;
 const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
 statusSpan.textContent = '미선택';
 statusSpan.style.color = '#666';
+
+const billDiv = bill.element;
+const buttons = billDiv.querySelectorAll('.vote-btn');
+buttons.forEach(btn => {
+btn.style.opacity = '1'; // 모든 버튼의 불투명도를 1로 재설정
+});
 });
 };
 
@@ -566,7 +572,7 @@ document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
 
 // 국회 의견 등록 사이트에서의 동작 (스마트 캡차 처리 포함)
 else if (currentDomain === 'pal.assembly.go.kr') {
-// console.log('📍 국회 의견 등록 사이트 감지 - 스마트 자동 입력 실행');
+// console.log('�� 국회 의견 등록 사이트 감지 - 스마트 자동 입력 실행');
 
 // LocalStorage에서 데이터 읽기
 const storedData = localStorage.getItem('autoFillData');
