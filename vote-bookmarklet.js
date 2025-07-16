@@ -27,16 +27,14 @@ javascript:(function() {
       return;
     }
 
-    // 2. 컨트롤 패널 생성 (모바일 최적화)
+    // 2. 컨트롤 패널 생성
     const controlPanel = document.createElement('div');
     controlPanel.id = 'vote-control-panel';
-    const isMobile = window.innerWidth <= 768;
     Object.assign(controlPanel.style, {
       position: 'fixed',
-      top: isMobile ? '10px' : '20px',
-      right: isMobile ? '10px' : '20px',
-      left: isMobile ? '10px' : 'auto',
-      width: isMobile ? 'auto' : '350px',
+      top: '20px',
+      right: '20px',
+      width: '350px',
       maxHeight: '80vh',
       overflowY: 'auto',
       background: 'white',
@@ -46,7 +44,7 @@ javascript:(function() {
       zIndex: '10000',
       boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       fontFamily: 'Arial, sans-serif',
-      fontSize: isMobile ? '16px' : '14px'
+      fontSize: '14px'
     });
 
     // 3. 헤더
@@ -205,18 +203,6 @@ javascript:(function() {
         return;
       }
 
-      // 선택된 법안들의 찬성/반대 비율 확인
-      const agreeBills = selectedBills.filter(bill => bill.vote === 'agree');
-      const disagreeBills = selectedBills.filter(bill => bill.vote === 'disagree');
-      
-      // 주요 선택 (더 많은 쪽)에 따라 기본값 결정
-      const isMainlyAgree = agreeBills.length >= disagreeBills.length;
-      
-      const defaultTitle = isMainlyAgree ? '이 법안에 찬성합니다' : '이 법안을 반대합니다';
-      const defaultContent = isMainlyAgree ? 
-        '국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.' : 
-        '국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.';
-
       // 입력 모달 생성
       const modalOverlay = document.createElement('div');
       modalOverlay.style.cssText = `
@@ -235,34 +221,26 @@ javascript:(function() {
       const modal = document.createElement('div');
       modal.style.cssText = `
         background: white;
-        padding: ${isMobile ? '20px' : '30px'};
+        padding: 30px;
         border-radius: 12px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        max-width: ${isMobile ? '95%' : '500px'};
+        max-width: 500px;
         width: 90%;
         font-family: Arial, sans-serif;
-        max-height: 80vh;
-        overflow-y: auto;
       `;
 
       modal.innerHTML = `
         <h3 style="margin: 0 0 20px 0; color: #333; text-align: center;">📝 의견 입력</h3>
-        ${agreeBills.length > 0 && disagreeBills.length > 0 ? 
-          `<div style="background: #e3f2fd; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
-            ℹ️ 찬성 ${agreeBills.length}개, 반대 ${disagreeBills.length}개 법안이 선택되었습니다.<br>
-            ${isMainlyAgree ? '찬성' : '반대'} 의견이 주로 적용되며, 개별 수정이 가능합니다.
-          </div>` : ''
-        }
         <div style="margin-bottom: 15px;">
           <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">제목:</label>
           <input type="text" id="modal-title" placeholder="예: 이 법안을 반대합니다" 
                  style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;"
-                 value="${defaultTitle}">
+                 value="이 법안을 반대합니다">
         </div>
         <div style="margin-bottom: 20px;">
           <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">내용:</label>
           <textarea id="modal-content" placeholder="예: 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다"
-                    style="width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;">${defaultContent}</textarea>
+                    style="width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;">국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.</textarea>
         </div>
         <div style="text-align: center;">
           <button id="modal-ok" style="background: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 6px; margin-right: 10px; cursor: pointer; font-size: 14px; font-weight: bold;">확인 (${selectedBills.length}개 법안)</button>
@@ -285,76 +263,38 @@ javascript:(function() {
         
         modalOverlay.remove();
         
-        // 찬성과 반대 법안 분리
-        const agreeBills = selectedBills.filter(bill => bill.vote === 'agree');
-        const disagreeBills = selectedBills.filter(bill => bill.vote === 'disagree');
+        // LocalStorage에 데이터 저장
+        localStorage.setItem('autoFillData', JSON.stringify({
+          title: titleInput,
+          content: contentInput,
+          timestamp: Date.now()
+        }));
         
-        console.log('처리할 법안들:', {
-          총법안: selectedBills.length,
-          찬성: agreeBills.length,
-          반대: disagreeBills.length
-        });
-        
-        // 찬성 법안들 처리 (찬성 내용으로)
-        if (agreeBills.length > 0) {
-          const agreeTitle = '이 법안에 찬성합니다';
-          const agreeContent = '국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.';
-          
-          // 찬성 법안용 LocalStorage 저장
-          localStorage.setItem('autoFillData_agree', JSON.stringify({
-            title: agreeTitle,
-            content: agreeContent,
-            timestamp: Date.now()
-          }));
-          
-          // 찬성 법안들 즉시 모두 열기
-          agreeBills.forEach((bill, index) => {
-            console.log(`찬성 법안 ${index + 1}/${agreeBills.length}:`, bill.title.substring(0, 30));
+        // 각 법안의 링크를 순차적으로 새 탭으로 열기 (URL 파라미터 추가)
+        selectedBills.forEach((bill, index) => {
+          setTimeout(() => {
+            console.log(`${index + 1}번째 법안 열기:`, bill.title);
             
-            const url = new URL(bill.link);
-            url.searchParams.set('autoTitle', encodeURIComponent(agreeTitle));
-            url.searchParams.set('autoContent', encodeURIComponent(agreeContent));
-            url.searchParams.set('voteType', 'agree');
-            
-            const link = document.createElement('a');
-            link.href = url.toString();
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          });
-        }
-        
-        // 반대 법안들 처리 (사용자 입력 내용으로)
-        if (disagreeBills.length > 0) {
-          // 반대 법안용 LocalStorage 저장
-          localStorage.setItem('autoFillData_disagree', JSON.stringify({
-            title: titleInput,
-            content: contentInput,
-            timestamp: Date.now()
-          }));
-          
-          // 반대 법안들 즉시 모두 열기
-          disagreeBills.forEach((bill, index) => {
-            console.log(`반대 법안 ${index + 1}/${disagreeBills.length}:`, bill.title.substring(0, 30));
-            
+            // URL에 파라미터 추가
             const url = new URL(bill.link);
             url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
             url.searchParams.set('autoContent', encodeURIComponent(contentInput));
-            url.searchParams.set('voteType', 'disagree');
+            const finalUrl = url.toString();
             
+            console.log('최종 URL:', finalUrl);
+            
+            // 새 탭으로 열기 (팝업 차단 우회)
             const link = document.createElement('a');
-            link.href = url.toString();
+            link.href = finalUrl;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-          });
-        }
+          }, index * 1000); // 1초 간격으로 열기
+        });
         
-        alert(`법안 처리 완료!\n찬성: ${agreeBills.length}개\n반대: ${disagreeBills.length}개\n\n각 창에서 북마클릿을 클릭하세요!`);
+        alert(`${selectedBills.length}개의 창이 열립니다.\n각 창에서 북마클릿을 다시 클릭하여 자동 입력하세요!`);
       };
 
       // 취소 버튼
@@ -370,51 +310,23 @@ javascript:(function() {
     
     // LocalStorage에서 데이터 읽기
     const storedData = localStorage.getItem('autoFillData');
-    const storedAgreeData = localStorage.getItem('autoFillData_agree');
-    const storedDisagreeData = localStorage.getItem('autoFillData_disagree');
-    
     let autoTitle = '';
     let autoContent = '';
     
-    // URL 파라미터에서 voteType 확인
-    const urlParams = new URLSearchParams(location.search);
-    const voteType = urlParams.get('voteType');
-    
-    console.log('🔍 감지된 투표 타입:', voteType);
-    
-    // voteType에 따라 적절한 데이터 로드
-    if (voteType === 'agree' && storedAgreeData) {
-      try {
-        const data = JSON.parse(storedAgreeData);
-        autoTitle = data.title || '';
-        autoContent = data.content || '';
-        console.log('📦 찬성 데이터 로드:', { autoTitle, autoContent });
-      } catch (e) {
-        console.warn('찬성 데이터 파싱 실패:', e);
-      }
-    } else if (voteType === 'disagree' && storedDisagreeData) {
-      try {
-        const data = JSON.parse(storedDisagreeData);
-        autoTitle = data.title || '';
-        autoContent = data.content || '';
-        console.log('📦 반대 데이터 로드:', { autoTitle, autoContent });
-      } catch (e) {
-        console.warn('반대 데이터 파싱 실패:', e);
-      }
-    } else if (storedData) {
-      // 기존 방식 (하위 호환)
+    if (storedData) {
       try {
         const data = JSON.parse(storedData);
         autoTitle = data.title || '';
         autoContent = data.content || '';
-        console.log('📦 기존 데이터 로드:', { autoTitle, autoContent });
+        console.log('📦 저장된 데이터 로드:', { autoTitle, autoContent });
       } catch (e) {
-        console.warn('기존 데이터 파싱 실패:', e);
+        console.warn('저장된 데이터 파싱 실패:', e);
       }
     }
     
-    // URL 파라미터에서도 읽기 (최종 백업)
+    // URL 파라미터에서도 읽기 (백업)
     if (!autoTitle || !autoContent) {
+      const urlParams = new URLSearchParams(location.search);
       autoTitle = autoTitle || decodeURIComponent(urlParams.get('autoTitle') || '');
       autoContent = autoContent || decodeURIComponent(urlParams.get('autoContent') || '');
       console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
@@ -461,28 +373,16 @@ javascript:(function() {
           captchaField.addEventListener('input', function() {
             const value = this.value;
             if (/^\d+$/.test(value) && value.length === 5) {
-              console.log('🚀 캡차 완료, 자동 제출 시작');
+              console.log('🚀 캡차 완료, 자동 제출');
               setTimeout(() => {
                 try {
                   trimAllInputText();
                   if (!validate()) return;
                   $('.loading_bar').show();
                   checkWebFilter($('#frm'));
-                  
-                  // 제출 후 창 닫기 (확인창 우회)
-                  setTimeout(() => {
-                    console.log('🚪 창 닫기 시도');
-                    window.close();
-                  }, 2000);
-                  
                 } catch (e) {
                   console.warn('자동 제출 실패, 수동 버튼 클릭');
                   document.getElementById('btn_opnReg').click();
-                  
-                  // 수동 클릭 후에도 창 닫기
-                  setTimeout(() => {
-                    window.close();
-                  }, 2000);
                 }
               }, 500);
             }
@@ -516,7 +416,7 @@ javascript:(function() {
           <div style="margin-top: 5px;"><strong>내용:</strong> ${autoContent.substring(0, 30)}...</div>
         </div>
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-          ⚡ <strong>캡차 5자리를 입력하면 자동 제출 후 창이 닫힙니다!</strong>
+          ⚡ <strong>캡차 5자리를 입력하면 자동으로 제출됩니다!</strong>
         </div>
         <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
       `;
@@ -541,3 +441,4 @@ javascript:(function() {
     alert('이 북마클릿은 VForKorea와 국회 의견 등록 사이트에서만 작동합니다.');
   }
 })();
+//변경완료
