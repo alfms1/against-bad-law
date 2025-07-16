@@ -128,25 +128,40 @@ const billsList = document.createElement('div');
 const bills = [];
 
 // --- postMessage 수신: 의견 등록 성공 시 체크표시/비활성화 ---
-window.addEventListener('message', function(event) {
-  if (!event.data || event.data.type !== 'voteSuccess') return;
-  const { billId, voteType } = event.data;
-  if (!billId || !voteType) return;
-  // LocalStorage에 기록
-  localStorage.setItem('vforkorea_voted_' + billId, voteType);
-  // 패널 UI 갱신
-  const billIdx = bills.findIndex(b => b.billId == billId);
-  if (billIdx !== -1) {
-    const bill = bills[billIdx];
+// window.addEventListener('message', function(event) {
+//   if (!event.data || event.data.type !== 'voteSuccess') return;
+//   const { billId, voteType } = event.data;
+//   if (!billId || !voteType) return;
+//   // LocalStorage에 기록
+//   localStorage.setItem('vforkorea_voted_' + billId, voteType);
+//   // 패널 UI 갱신
+//   const billIdx = bills.findIndex(b => b.billId == billId);
+//   if (billIdx !== -1) {
+//     const bill = bills[billIdx];
+//     const statusSpan = bill.element.querySelector('span.vote-status');
+//     statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
+//     statusSpan.style.color = '#888';
+//     // 버튼 비활성화
+//     const buttons = bill.element.querySelectorAll('.vote-btn');
+//     buttons.forEach(btn => btn.disabled = true);
+//     bill.vote = voteType; // 내부 상태도 갱신
+//   }
+// });
+
+// --- LocalStorage polling: 2초마다 상태 확인 ---
+setInterval(() => {
+  bills.forEach((bill, idx) => {
+    const voted = localStorage.getItem('vforkorea_voted_' + bill.billId);
     const statusSpan = bill.element.querySelector('span.vote-status');
-    statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
-    statusSpan.style.color = '#888';
-    // 버튼 비활성화
     const buttons = bill.element.querySelectorAll('.vote-btn');
-    buttons.forEach(btn => btn.disabled = true);
-    bill.vote = voteType; // 내부 상태도 갱신
-  }
-});
+    if (voted) {
+      statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
+      statusSpan.style.color = '#888';
+      buttons.forEach(btn => btn.disabled = true);
+      bill.vote = voted;
+    }
+  });
+}, 2000);
 
 todayRows.forEach((tr, index) => {
 const titleElement = tr.querySelector('.content .t');
