@@ -2,39 +2,39 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>Vote Assistant 북마클릿 설치</title>
+  <title>Vote Assistant 북마클릿 등록</title>
   <style>
     body { font-family: sans-serif; padding: 2em; line-height: 1.6; }
-    code { background: #f0f0f0; padding: 0.2em 0.4em; }
-    button { font-size: 1rem; padding: 0.5em 1em; margin-top: 1em; }
+    code { background: #f0f0f0; padding: 0.3em 0.5em; display: block; margin-top: 1em; word-break: break-word; }
   </style>
 </head>
 <body>
-  <h1>Vote Assistant 북마클릿 설치</h1>
+  <h1>✅ Vote Assistant 북마클릿 등록 방법</h1>
+
   <p>
-    아래 버튼을 길게 눌러 즐겨찾기로 등록하세요.<br>
-    그런 다음 <code>vforkorea.com/assem</code> 사이트에서 북마클릿을 실행하면 됩니다.
+    아래 링크를 길게 눌러 북마크에 추가하세요.<br>
+    이후 <strong><code>vforkorea.com</code></strong> 또는 <strong><code>pal.assembly.go.kr</code></strong> 사이트에 들어가서 북마클릿을 실행하면 됩니다.
   </p>
 
-  <a id="bookmarklet" href="#">
-    <button>북마클릿 추가</button>
+  <p><strong>📌 북마클릿 코드 링크:</strong></p>
+
+  <a href="#" id="bookmarklet-link">
+    📥 북마클릿 추가하기 (길게 눌러 북마크 등록)
   </a>
 
-  <p>또는 아래 링크를 길게 눌러 즐겨찾기 등록:<br>
-    <code id="bookmarklet-code" style="word-break:break-all;"></code>
-  </p>
+  <p><strong>🔧 북마클릿 코드 (복사해서 직접 북마크 만들기)</strong></p>
+  <code id="bookmarklet-code"></code>
 
   <script>
     const jsURL = 'https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';
-
-    const bookmarkletCode = `javascript:(function(){
+    const bookmarklet = `javascript:(function(){
       var s=document.createElement('script');
       s.src='${jsURL}';
       document.body.appendChild(s);
     })();`;
 
-    document.getElementById('bookmarklet').href = bookmarkletCode;
-    document.getElementById('bookmarklet-code').textContent = bookmarkletCode;
+    document.getElementById('bookmarklet-link').href = bookmarklet;
+    document.getElementById('bookmarklet-code').textContent = bookmarklet;
   </script>
 </body>
 </html>
