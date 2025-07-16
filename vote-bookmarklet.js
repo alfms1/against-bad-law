@@ -102,7 +102,7 @@
   const actionButtons = document.createElement('div');
   actionButtons.innerHTML = `
     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">선택한 법안에 투표하기</button>
+      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">선택한 법안에 의견 등록하기</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
         새 창에서 제목/내용이 자동 입력됩니다.<br>
@@ -188,7 +188,7 @@
     controlPanel.remove();
   };
 
-  // 7. 투표 실행 (여기만 수정!)
+  // 7. 의견 등록 실행 (여기가 핵심 수정 부분!)
   document.getElementById('start-voting').onclick = () => {
     const selectedBills = bills.filter(bill => bill.vote !== null);
     
@@ -197,7 +197,7 @@
       return;
     }
 
-    if (!confirm(`${selectedBills.length}개 법안에 투표하시겠습니까?`)) {
+    if (!confirm(`${selectedBills.length}개 법안에 의견을 등록하시겠습니까?`)) {
       return;
     }
 
@@ -218,7 +218,7 @@
     
     const updateStatus = () => {
       statusDiv.innerHTML = `
-        <h4>투표 진행 중...</h4>
+        <h4>의견 등록 진행 중...</h4>
         <p>진행률: ${currentIndex}/${selectedBills.length}</p>
         <p>현재: ${selectedBills[currentIndex]?.title.substring(0, 50)}...</p>
         <button onclick="this.parentElement.remove()">취소</button>
@@ -228,8 +228,8 @@
     const openNext = () => {
       if (currentIndex >= selectedBills.length) {
         statusDiv.innerHTML = `
-          <h4>✅ 모든 투표가 완료되었습니다!</h4>
-          <p>총 ${selectedBills.length}개 법안에 투표했습니다.</p>
+          <h4>✅ 모든 의견 등록이 완료되었습니다!</h4>
+          <p>총 ${selectedBills.length}개 법안에 의견을 등록했습니다.</p>
           <button onclick="this.parentElement.remove()">확인</button>
         `;
         return;
@@ -238,91 +238,119 @@
       updateStatus();
       
       const bill = selectedBills[currentIndex];
-      // URL 파라미터 수정: ?vote=agree 또는 ?vote=disagree 형태로 전달
-      const separator = bill.link.includes('?') ? '&' : '?';
-      const fullUrl = `${bill.link}${separator}vote=${bill.vote}`;
+      const voteParam = bill.vote === 'agree' ? 'Y' : 'N';
+      const fullUrl = `${bill.link}&opinion=${voteParam}`;
       
-      console.log(`${currentIndex + 1}번째 투표:`, bill.title, `(${bill.vote})`);
+      console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title, `(${bill.vote})`);
       console.log('열리는 URL:', fullUrl);
       
       const win = window.open(fullUrl, `vote_${currentIndex}`, 'width=1200,height=800');
       
-      // 새 창에 자동 입력 스크립트 주입 시도
+      // 🔥 새 창에 자동 입력 스크립트 주입 (핵심 추가 부분!)
       setTimeout(() => {
         try {
-          if (win && !win.closed) {
+          if (win && !win.closed && win.document) {
+            console.log('새 창에 자동 입력 스크립트 주입 중...');
+            
             const script = win.document.createElement('script');
             script.textContent = `
               (() => {
-                const voteParam = new URLSearchParams(location.search).get("vote");
-                const agree = voteParam === "agree";
-                const isValid = voteParam === "agree" || voteParam === "disagree";
+                console.log('자동 입력 스크립트 실행됨');
                 
-                console.log('자동 입력 스크립트 실행:', voteParam, agree, isValid);
+                const opinionParam = new URLSearchParams(location.search).get("opinion");
+                const agree = opinionParam === "Y";
+                const isValid = opinionParam === "Y" || opinionParam === "N";
                 
-                if (!isValid) return;
+                console.log('opinion 파라미터:', opinionParam, '찬성여부:', agree);
+                
+                if (!isValid) {
+                  console.log('유효하지 않은 opinion 파라미터');
+                  return;
+                }
 
                 function fillForm() {
+                  console.log('폼 입력 시작...');
+                  
                   const sj = document.querySelector('#txt_sj');
                   const cn = document.querySelector('#txt_cn');
-                  const input = document.querySelector('#catpchaAnswer');
+                  const captcha = document.querySelector('#catpchaAnswer');
                   
                   if (sj) {
                     sj.value = agree ? '찬성합니다' : '반대합니다';
-                    console.log('제목 입력 완료:', sj.value);
+                    console.log('제목 입력:', sj.value);
+                  } else {
+                    console.log('제목 입력란(#txt_sj)을 찾을 수 없음');
                   }
+                  
                   if (cn) {
                     cn.value = agree ? '이 법률안을 찬성합니다.' : '이 법률안을 반대합니다.';
-                    console.log('내용 입력 완료:', cn.value);
+                    console.log('내용 입력:', cn.value);
+                  } else {
+                    console.log('내용 입력란(#txt_cn)을 찾을 수 없음');
                   }
-                  if (input) {
-                    input.focus();
+                  
+                  if (captcha) {
+                    captcha.focus();
                     console.log('캡차 입력란에 포커스');
+                  } else {
+                    console.log('캡차 입력란(#catpchaAnswer)을 찾을 수 없음');
                   }
-                }
-
-                function createNotice() {
-                  const notice = document.createElement('div');
-                  notice.style.cssText = \`
+                  
+                  // 상태 표시 박스 생성
+                  const statusBox = document.createElement('div');
+                  statusBox.style.cssText = \`
                     position: fixed;
                     top: 20px;
                     left: 20px;
                     background: \${agree ? '#4caf50' : '#f44336'};
                     color: white;
-                    padding: 10px 15px;
-                    border-radius: 6px;
+                    padding: 15px;
+                    border-radius: 8px;
                     z-index: 9999;
                     font-weight: bold;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                   \`;
-                  notice.textContent = agree ? '✅ 찬성으로 자동 입력됨' : '❌ 반대로 자동 입력됨';
-                  document.body.appendChild(notice);
+                  statusBox.innerHTML = \`
+                    <div>\${agree ? '✅ 찬성 의견' : '❌ 반대 의견'} 자동 입력됨</div>
+                    <div style="font-size: 12px; margin-top: 5px;">캡차를 입력하고 등록하세요</div>
+                    <button onclick="this.parentElement.remove()" style="margin-top: 8px; padding: 4px 8px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
+                  \`;
+                  document.body.appendChild(statusBox);
                 }
 
+                // 페이지 로딩 대기
                 let attempts = 0;
-                const waitAndFill = () => {
+                const waitForElements = () => {
                   attempts++;
                   const sj = document.querySelector('#txt_sj');
                   const cn = document.querySelector('#txt_cn');
                   
+                  console.log(\`시도 \${attempts}: 제목 입력란 \${sj ? '발견' : '없음'}, 내용 입력란 \${cn ? '발견' : '없음'}\`);
+                  
                   if (sj && cn) {
                     fillForm();
-                    createNotice();
                   } else if (attempts < 20) {
-                    setTimeout(waitAndFill, 500);
+                    setTimeout(waitForElements, 500);
+                  } else {
+                    console.log('입력란을 찾을 수 없습니다. 수동으로 입력해주세요.');
                   }
                 };
 
                 if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', waitAndFill);
+                  document.addEventListener('DOMContentLoaded', waitForElements);
                 } else {
-                  waitAndFill();
+                  waitForElements();
                 }
               })();
             `;
+            
             win.document.head.appendChild(script);
+            console.log('스크립트 주입 완료');
+          } else {
+            console.log('새 창 접근 실패 - CORS 제한일 수 있음');
           }
         } catch (e) {
-          console.log('스크립트 주입 실패 (CORS 제한):', e);
+          console.log('스크립트 주입 실패:', e.message);
         }
       }, 2000);
       
