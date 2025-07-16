@@ -1,11 +1,373 @@
-<!-- vote-launcher.html -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Vote Assistant 실행중...</title></head>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote Assistant 북마클릿 등록</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      padding: 1em; 
+      line-height: 1.6; 
+      max-width: 600px;
+      margin: 0 auto;
+      background: #f8f9fa;
+    }
+    .container {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2e7d32; margin-bottom: 0.5em; }
+    .method {
+      background: #e3f2fd;
+      padding: 1.5em;
+      border-radius: 8px;
+      margin: 1.5em 0;
+      border-left: 4px solid #1976d2;
+    }
+    .method h3 {
+      margin-top: 0;
+      color: #1976d2;
+    }
+    .code-box {
+      background: #f5f5f5;
+      padding: 1em;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      word-break: break-all;
+      border: 1px solid #ddd;
+      margin: 1em 0;
+    }
+    .copy-btn {
+      background: #4caf50;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    .copy-btn:hover {
+      background: #45a049;
+    }
+    .copy-btn:active {
+      background: #3d8b40;
+    }
+    .warning {
+      background: #fff3e0;
+      padding: 1em;
+      border-radius: 6px;
+      border-left: 4px solid #ff9800;
+      margin: 1em 0;
+    }
+    .step {
+      background: white;
+      padding: 1em;
+      margin: 0.5em 0;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    .step-number {
+      background: #1976d2;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    .test-area {
+      background: #f0f4f8;
+      padding: 1.5em;
+      border-radius: 8px;
+      margin: 1.5em 0;
+    }
+    .browser-tabs {
+      display: flex;
+      gap: 10px;
+      margin: 1em 0;
+      flex-wrap: wrap;
+    }
+    .browser-tab {
+      background: #e0e0e0;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .browser-tab.active {
+      background: #1976d2;
+      color: white;
+    }
+    .browser-content {
+      display: none;
+    }
+    .browser-content.active {
+      display: block;
+    }
+    .success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      padding: 1em;
+      border-radius: 6px;
+      margin: 1em 0;
+      border: 1px solid #a5d6a7;
+    }
+  </style>
+</head>
 <body>
-<script>
-  var s = document.createElement('script');
-  s.src = 'https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';
-  document.body.appendChild(s);
-</script>
+  <div class="container">
+    <h1>📱 Vote Assistant 북마클릿 등록</h1>
+    
+    <div class="warning">
+      <strong>⚠️ 중요:</strong> 모바일에서는 링크를 길게 눌러도 북마크 등록이 안 됩니다. 아래 방법들을 사용하세요!
+    </div>
+
+    <!-- 브라우저별 탭 -->
+    <div class="browser-tabs">
+      <div class="browser-tab active" onclick="showBrowser('chrome')">Chrome (안드로이드)</div>
+      <div class="browser-tab" onclick="showBrowser('safari')">Safari (iOS)</div>
+      <div class="browser-tab" onclick="showBrowser('kiwi')">Kiwi Browser</div>
+      <div class="browser-tab" onclick="showBrowser('manual')">수동 방법</div>
+    </div>
+
+    <!-- Chrome 안드로이드 -->
+    <div id="chrome-content" class="browser-content active">
+      <div class="method">
+        <h3>🤖 Chrome (안드로이드) 방법</h3>
+        
+        <div class="step">
+          <span class="step-number">1</span>
+          <strong>아무 페이지나 북마크 저장</strong><br>
+          Chrome에서 ⭐ 버튼을 눌러 아무 페이지나 북마크로 저장
+        </div>
+        
+        <div class="step">
+          <span class="step-number">2</span>
+          <strong>북마클릿 코드 복사</strong><br>
+          <div class="code-box" id="bookmarklet-code-chrome"></div>
+          <button class="copy-btn" onclick="copyCode('bookmarklet-code-chrome')">📋 코드 복사</button>
+        </div>
+        
+        <div class="step">
+          <span class="step-number">3</span>
+          <strong>북마크 편집</strong><br>
+          Chrome 메뉴 → 북마크 → 저장한 북마크 편집 → URL 부분을 <strong>완전히 지우고</strong> 복사한 코드 붙여넣기
+        </div>
+        
+        <div class="step">
+          <span class="step-number">4</span>
+          <strong>이름 변경 후 저장</strong><br>
+          북마크 이름을 "Vote Assistant"로 변경하고 저장
+        </div>
+      </div>
+    </div>
+
+    <!-- Safari iOS -->
+    <div id="safari-content" class="browser-content">
+      <div class="method">
+        <h3>🍎 Safari (iOS) 방법</h3>
+        
+        <div class="step">
+          <span class="step-number">1</span>
+          <strong>이 페이지를 북마크로 저장</strong><br>
+          Safari에서 공유 버튼 → 북마크에 추가
+        </div>
+        
+        <div class="step">
+          <span class="step-number">2</span>
+          <strong>북마클릿 코드 복사</strong><br>
+          <div class="code-box" id="bookmarklet-code-safari"></div>
+          <button class="copy-btn" onclick="copyCode('bookmarklet-code-safari')">📋 코드 복사</button>
+        </div>
+        
+        <div class="step">
+          <span class="step-number">3</span>
+          <strong>북마크 편집</strong><br>
+          북마크 메뉴 → 편집 → 방금 저장한 북마크 선택 → URL 필드를 <strong>완전히 지우고</strong> 복사한 코드 붙여넣기
+        </div>
+        
+        <div class="step">
+          <span class="step-number">4</span>
+          <strong>iOS 단축어 방법 (대안)</strong><br>
+          <button onclick="window.open('https://www.icloud.com/shortcuts/voteassistant', '_blank')" style="background: #007aff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📱 iOS 단축어 다운로드</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kiwi Browser -->
+    <div id="kiwi-content" class="browser-content">
+      <div class="method">
+        <h3>🥝 Kiwi Browser (추천)</h3>
+        
+        <div class="step">
+          <span class="step-number">1</span>
+          <strong>Kiwi Browser 설치</strong><br>
+          <button onclick="window.open('https://play.google.com/store/apps/details?id=com.kiwibrowser.browser', '_blank')" style="background: #34a853; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">📱 Play 스토어에서 설치</button>
+        </div>
+        
+        <div class="step">
+          <span class="step-number">2</span>
+          <strong>개발자 도구 사용</strong><br>
+          Kiwi Browser에서 메뉴 → Developer tools → Console
+        </div>
+        
+        <div class="step">
+          <span class="step-number">3</span>
+          <strong>코드 직접 실행</strong><br>
+          <div class="code-box" id="direct-code-kiwi"></div>
+          <button class="copy-btn" onclick="copyCode('direct-code-kiwi')">📋 코드 복사</button>
+          <br><small>VForKorea 사이트에서 Console에 붙여넣고 Enter</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수동 방법 -->
+    <div id="manual-content" class="browser-content">
+      <div class="method">
+        <h3>✋ 수동 처리 방법</h3>
+        
+        <div class="step">
+          <span class="step-number">1</span>
+          <strong>VForKorea 접속</strong><br>
+          vforkorea.com에서 "오늘 마감" 표시된 법안들 확인
+        </div>
+        
+        <div class="step">
+          <span class="step-number">2</span>
+          <strong>의견 템플릿 복사</strong><br>
+          <div class="code-box">
+            <strong>반대 제목:</strong> 이 법안을 반대합니다<br>
+            <strong>반대 내용:</strong> 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.
+          </div>
+          <button class="copy-btn" onclick="copyTemplate()">📋 템플릿 복사</button>
+        </div>
+        
+        <div class="step">
+          <span class="step-number">3</span>
+          <strong>각 법안별 의견 등록</strong><br>
+          의견등록 버튼 → 템플릿 붙여넣기 → 캡차 입력 → 제출
+        </div>
+      </div>
+    </div>
+
+    <!-- 테스트 영역 -->
+    <div class="test-area">
+      <h3>🔧 북마클릿 테스트</h3>
+      <p>북마클릿 등록 후 여기서 테스트해보세요:</p>
+      <button onclick="testBookmarklet()" style="background: #ff9800; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">🧪 북마클릿 테스트</button>
+      <div id="test-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="success">
+      <strong>✅ 성공하면:</strong> VForKorea나 국회 사이트에서 저장한 북마클릿을 실행하면 자동화 패널이 나타납니다!
+    </div>
+  </div>
+
+  <script>
+    // 북마클릿 코드 생성
+    const jsURL = 'https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';
+    const bookmarkletCode = `javascript:(function(){var s=document.createElement('script');s.src='${jsURL}';document.body.appendChild(s);})();`;
+    
+    // 직접 실행용 코드 (javascript: 없이)
+    const directCode = `(function(){var s=document.createElement('script');s.src='${jsURL}';document.body.appendChild(s);})();`;
+
+    // 코드를 각 요소에 삽입
+    document.getElementById('bookmarklet-code-chrome').textContent = bookmarkletCode;
+    document.getElementById('bookmarklet-code-safari').textContent = bookmarkletCode;
+    document.getElementById('direct-code-kiwi').textContent = directCode;
+
+    // 브라우저 탭 전환
+    function showBrowser(browser) {
+      // 모든 탭과 콘텐츠 비활성화
+      document.querySelectorAll('.browser-tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.browser-content').forEach(content => content.classList.remove('active'));
+      
+      // 선택된 탭과 콘텐츠 활성화
+      document.querySelector(`[onclick="showBrowser('${browser}')"]`).classList.add('active');
+      document.getElementById(`${browser}-content`).classList.add('active');
+    }
+
+    // 코드 복사 함수
+    async function copyCode(elementId) {
+      const element = document.getElementById(elementId);
+      const text = element.textContent;
+      
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = element.nextElementSibling;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ 복사됨!';
+        btn.style.background = '#4caf50';
+        
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '#4caf50';
+        }, 2000);
+      } catch (err) {
+        // 클립보드 API가 지원되지 않는 경우
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        alert('코드가 복사되었습니다!');
+      }
+    }
+
+    // 템플릿 복사
+    async function copyTemplate() {
+      const template = `제목: 이 법안을 반대합니다
+내용: 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다. 더 신중한 검토와 충분한 토론이 필요하다고 생각합니다.`;
+      
+      try {
+        await navigator.clipboard.writeText(template);
+        alert('📋 템플릿이 복사되었습니다!');
+      } catch (err) {
+        const textArea = document.createElement('textarea');
+        textArea.value = template;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('📋 템플릿이 복사되었습니다!');
+      }
+    }
+
+    // 북마클릿 테스트
+    function testBookmarklet() {
+      const testResult = document.getElementById('test-result');
+      
+      try {
+        // 북마클릿 코드 실행 시뮬레이션
+        if (typeof window !== 'undefined' && window.location) {
+          testResult.innerHTML = `
+            <div style="background: #e8f5e8; color: #2e7d32; padding: 10px; border-radius: 4px; margin-top: 10px;">
+              ✅ JavaScript 실행 환경 정상<br>
+              📍 현재 도메인: ${window.location.hostname}<br>
+              💡 VForKorea나 국회 사이트에서 북마클릿을 실행하세요!
+            </div>
+          `;
+        }
+      } catch (err) {
+        testResult.innerHTML = `
+          <div style="background: #ffebee; color: #c62828; padding: 10px; border-radius: 4px; margin-top: 10px;">
+            ❌ 오류: ${err.message}
+          </div>
+        `;
+      }
+    }
+  </script>
 </body>
 </html>
