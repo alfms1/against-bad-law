@@ -507,37 +507,133 @@ javascript:(function() {
           
           // 제출 결과 확인 함수
           function checkSubmissionResult() {
-            // 성공 확인 방법들
-            const successIndicators = [
-              // 성공 메시지 확인
-              () => document.querySelector('.alert-success, .success, [class*="success"]'),
-              // 완료 페이지 확인
-              () => window.location.href.includes('complete') || window.location.href.includes('success'),
-              // 에러 메시지 부재 확인
-              () => !document.querySelector('.alert-danger, .error, [class*="error"]'),
-              // 캡차 필드가 사라졌는지 확인
-              () => !document.querySelector('#catpchaAnswer') || document.querySelector('#catpchaAnswer').disabled
+            // 먼저 에러 메시지부터 확인 (우선순위 높음)
+            const errorChecks = [
+              // 방지문자 오류 메시지들
+              () => {
+                const alerts = document.querySelectorAll('.alert, .error, .message, div, span');
+                for (let alert of alerts) {
+                  const text = alert.textContent || alert.innerText || '';
+                  if (text.includes('방지문자') || text.includes('보안문자') || 
+                      text.includes('틀렸') || text.includes('잘못') || 
+                      text.includes('올바르지') || text.includes('다시') ||
+                      text.includes('확인') && text.includes('문자')) {
+                    console.log('🚫 방지문자 오류 감지:', text.trim());
+                    return text.trim();
+                  }
+                }
+                return null;
+              },
+              // JavaScript alert 메시지 확인
+              () => {
+                // 기존에 alert가 실행되었는지 확인하는 방법
+                const originalAlert = window.alert;
+                let alertMessage = null;
+                window.alert = function(msg) {
+                  alertMessage = msg;
+                  console.log('🚨 Alert 메시지 감지:', msg);
+                  return originalAlert.call(this, msg);
+                };
+                return alertMessage;
+              },
+              // 폼 유효성 검사 실패
+              () => {
+                const captchaInput = document.querySelector('#catpchaAnswer');
+                if (captchaInput && captchaInput.style.borderColor === 'red') {
+                  return '캡차 필드 에러 스타일 감지';
+                }
+                return null;
+              }
             ];
             
-            const isSuccess = successIndicators.some(check => {
+            // 에러 확인
+            let errorMessage = null;
+            for (let check of errorChecks) {
               try {
-                return check();
+                const result = check();
+                if (result) {
+                  errorMessage = result;
+                  break;
+                }
               } catch (e) {
-                return false;
+                console.log('에러 체크 중 예외:', e);
               }
+            }
+            
+            // 성공 확인 (에러가 없을 때만)
+            const successChecks = [
+              // URL 변경 확인 (등록 완료 페이지로 이동)
+              () => {
+                const url = window.location.href;
+                return url.includes('complete') || url.includes('success') || 
+                       url.includes('finish') || url.includes('done');
+              },
+              // 성공 메시지 확인
+              () => {
+                const successElements = document.querySelectorAll('.alert-success, .success, .complete');
+                for (let elem of successElements) {
+                  const text = elem.textContent || elem.innerText || '';
+                  if (text.includes('완료') || text.includes('성공') || 
+                      text.includes('등록') && text.includes('되었습니다')) {
+                    return text.trim();
+                  }
+                }
+                return null;
+              },
+              // 폼이 사라졌는지 확인
+              () => {
+                const form = document.querySelector('#frm');
+                const captcha = document.querySelector('#catpchaAnswer');
+                return !form || !captcha || captcha.disabled;
+              }
+            ];
+            
+            let isSuccess = false;
+            if (!errorMessage) {
+              for (let check of successChecks) {
+                try {
+                  if (check()) {
+                    isSuccess = true;
+                    break;
+                  }
+                } catch (e) {
+                  console.log('성공 체크 중 예외:', e);
+                }
+              }
+            }
+            
+            console.log('🔍 제출 결과 상세 확인:', { 
+              errorMessage, 
+              isSuccess,
+              currentUrl: window.location.href,
+              pageTitle: document.title
             });
             
-            // 에러 메시지 확인
-            const errorElement = document.querySelector('.alert-danger, .error, [class*="error"]');
-            const hasError = errorElement && errorElement.textContent.trim().length > 0;
-            
-            console.log('🔍 제출 결과 확인:', { isSuccess, hasError });
-            
-            if (isSuccess && !hasError) {
+            if (errorMessage) {
+              // ❌ 명확한 에러 - 탭 유지
+              console.log('❌ 제출 실패 (에러 메시지 감지) - 탭 유지');
+              isSubmitting = false;
+              
+              if (captchaField) {
+                // 캡차 필드 초기화하고 포커스
+                captchaField.value = '';
+                captchaField.style.background = '#ffebee';
+                captchaField.style.borderColor = '#f44336';
+                setTimeout(() => {
+                  captchaField.focus();
+                  captchaField.style.background = '#fff3e0';
+                  captchaField.style.borderColor = '#ff9800';
+                }, 1000);
+              }
+              
+              // 실패 알림 표시 (구체적인 에러 메시지 포함)
+              showRetryNotification(errorMessage);
+              
+            } else if (isSuccess) {
               // 🎉 성공 - 탭 닫기
               console.log('🎉 제출 성공! 탭을 닫습니다...');
               
-              // 성공 알림 표시 (짧게)
+              // 성공 알림 표시
               showSuccessNotification();
               
               setTimeout(() => {
@@ -552,18 +648,11 @@ javascript:(function() {
               }, 1500);
               
             } else {
-              // ❌ 실패 - 탭 유지하고 재입력 가능하게
-              console.log('❌ 제출 실패 - 탭 유지, 재입력 가능');
-              isSubmitting = false;
-              
-              if (captchaField) {
-                captchaField.style.background = '#fff3e0';
-                captchaField.style.borderColor = '#ff9800';
-                captchaField.focus();
-                
-                // 실패 알림 표시
-                showRetryNotification();
-              }
+              // 🤔 애매한 상황 - 좀 더 기다려보기
+              console.log('🤔 결과 불분명 - 추가 대기 중...');
+              setTimeout(() => {
+                checkSubmissionResult(); // 재귀 호출로 다시 확인
+              }, 2000);
             }
           }
           
@@ -596,14 +685,14 @@ javascript:(function() {
             document.body.appendChild(notification);
           }
           
-          // 재시도 알림 함수
-          function showRetryNotification() {
+          // 재시도 알림 함수 (에러 메시지 포함)
+          function showRetryNotification(errorMsg = '') {
             const notification = document.createElement('div');
             notification.style.cssText = `
               position: fixed;
               top: 20px;
               right: 20px;
-              background: linear-gradient(135deg, #ff9800, #f57c00);
+              background: linear-gradient(135deg, #f44336, #d32f2f);
               color: white;
               padding: 15px 20px;
               border-radius: 8px;
@@ -611,22 +700,33 @@ javascript:(function() {
               font-family: Arial, sans-serif;
               box-shadow: 0 4px 15px rgba(0,0,0,0.3);
               font-size: 14px;
-              max-width: 300px;
+              max-width: 350px;
+              border: 2px solid #fff;
             `;
             
+            const shortError = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
+            
             notification.innerHTML = `
-              <div style="font-weight: bold; margin-bottom: 5px;">⚠️ 캡차 다시 입력</div>
-              <div style="font-size: 13px; opacity: 0.9;">올바른 5자리 숫자를 입력해주세요</div>
+              <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">❌</span>
+                방지문자 오류!
+              </div>
+              ${errorMsg ? `<div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px; background: rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">${shortError}</div>` : ''}
+              <div style="font-size: 13px; opacity: 0.9;">
+                캡차 필드가 초기화되었습니다.<br>
+                올바른 5자리 숫자를 다시 입력해주세요.
+              </div>
+              <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.7;">✕</button>
             `;
             
             document.body.appendChild(notification);
             
-            // 3초 후 알림 제거
+            // 5초 후 자동 제거
             setTimeout(() => {
               if (document.body.contains(notification)) {
                 document.body.removeChild(notification);
               }
-            }, 3000);
+            }, 5000);
           }
           
           captchaField._smartCaptchaSet = true;
