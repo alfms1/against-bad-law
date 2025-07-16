@@ -293,21 +293,20 @@
     const bookmarkletCode = `javascript:(function(){
       console.log('🎯 자동 의견 입력 시작');
       
-      const urlParams = new URLSearchParams(location.search);
-      let autoTitle = urlParams.get('autoTitle') || '';
-      let autoContent = urlParams.get('autoContent') || '';
-      
-      // 이중 인코딩 문제 해결
+      // 이중 인코딩 방지 - URL에서 직접 파라미터 읽기
       try {
-        autoTitle = decodeURIComponent(autoTitle);
+        const urlParts = location.href.split('?')[1];
+        if (urlParts) {
+          const params = new URLSearchParams(urlParts);
+          autoTitle = params.get('autoTitle') || '';
+          autoContent = params.get('autoContent') || '';
+        }
       } catch(e) {
-        console.log('제목 디코딩 오류:', e);
-      }
-      
-      try {
-        autoContent = decodeURIComponent(autoContent);
-      } catch(e) {
-        console.log('내용 디코딩 오류:', e);
+        console.log('URL 파싱 오류:', e);
+        // 기존 방식으로 fallback
+        const urlParams = new URLSearchParams(location.search);
+        autoTitle = urlParams.get('autoTitle') || '';
+        autoContent = urlParams.get('autoContent') || '';
       }
       
       console.log('제목:', autoTitle);
@@ -384,10 +383,16 @@
       tryFill();
     })();`;
 
-    // 클립보드에 복사
-    navigator.clipboard.writeText(bookmarkletCode).catch(() => {
-      console.log('클립보드 복사 실패');
-    });
+    // 클립보드에 복사 (에러 처리 개선)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(bookmarkletCode).then(() => {
+        console.log('✅ 북마클릿 코드 클립보드 복사 성공');
+      }).catch((err) => {
+        console.warn('⚠️ 클립보드 복사 실패, 수동으로 복사하세요:', err);
+      });
+    } else {
+      console.warn('⚠️ 클립보드 API 지원되지 않음');
+    }
 
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
@@ -434,12 +439,10 @@
       
       const bill = selectedBills[currentIndex];
       
-      // 🔧 수정된 URL 생성 (이중 인코딩 문제 해결)
+      // 🔧 수정된 URL 생성 (인코딩 없이 직접 추가)
       const baseUrl = bill.link;
-      const url = new URL(baseUrl);
-      url.searchParams.set('autoTitle', titleInput);
-      url.searchParams.set('autoContent', contentInput);
-      const fullUrl = url.toString();
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      const fullUrl = `${baseUrl}${separator}autoTitle=${encodeURIComponent(titleInput)}&autoContent=${encodeURIComponent(contentInput)}`;
       
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
