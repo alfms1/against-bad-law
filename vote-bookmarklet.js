@@ -128,37 +128,58 @@ const billsList = document.createElement('div');
 const bills = [];
 
 // --- postMessage 수신: 의견 등록 성공 시 체크표시/비활성화 ---
-// window.addEventListener('message', function(event) {
-//   if (!event.data || event.data.type !== 'voteSuccess') return;
-//   const { billId, voteType } = event.data;
-//   if (!billId || !voteType) return;
-//   // LocalStorage에 기록
-//   localStorage.setItem('vforkorea_voted_' + billId, voteType);
-//   // 패널 UI 갱신
-//   const billIdx = bills.findIndex(b => b.billId == billId);
-//   if (billIdx !== -1) {
-//     const bill = bills[billIdx];
-//     const statusSpan = bill.element.querySelector('span.vote-status');
-//     statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
-//     statusSpan.style.color = '#888';
-//     // 버튼 비활성화
-//     const buttons = bill.element.querySelectorAll('.vote-btn');
-//     buttons.forEach(btn => btn.disabled = true);
-//     bill.vote = voteType; // 내부 상태도 갱신
-//   }
-// });
+window.addEventListener('message', function(event) {
+  console.log('[패널] postMessage 수신:', event);
+  if (!event.data || event.data.type !== 'voteSuccess') {
+    console.log('[패널] 메시지 타입 불일치 또는 데이터 없음:', event.data);
+    return;
+  }
+  const { billId, voteType } = event.data;
+  console.log('[패널] 수신 billId:', billId, 'voteType:', voteType);
+  if (!billId || !voteType) {
+    console.log('[패널] billId 또는 voteType 없음');
+    return;
+  }
+  try {
+    localStorage.setItem('vforkorea_voted_' + billId, voteType);
+    console.log('[패널] LocalStorage 기록 완료:', 'vforkorea_voted_' + billId, voteType);
+  } catch (e) {
+    console.error('[패널] LocalStorage 기록 에러:', e);
+  }
+  // 패널 UI 갱신
+  const billIdx = bills.findIndex(b => b.billId == billId);
+  if (billIdx !== -1) {
+    const bill = bills[billIdx];
+    const statusSpan = bill.element.querySelector('span.vote-status');
+    statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
+    statusSpan.style.color = '#888';
+    // 버튼 비활성화
+    const buttons = bill.element.querySelectorAll('.vote-btn');
+    buttons.forEach(btn => btn.disabled = true);
+    bill.vote = voteType; // 내부 상태도 갱신
+    console.log('[패널] UI 갱신 완료:', billId, voteType);
+  } else {
+    console.log('[패널] bills 배열에서 billId 못 찾음:', billId);
+  }
+});
 
 // --- LocalStorage polling: 2초마다 상태 확인 ---
 setInterval(() => {
   bills.forEach((bill, idx) => {
-    const voted = localStorage.getItem('vforkorea_voted_' + bill.billId);
-    const statusSpan = bill.element.querySelector('span.vote-status');
-    const buttons = bill.element.querySelectorAll('.vote-btn');
-    if (voted) {
-      statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
-      statusSpan.style.color = '#888';
-      buttons.forEach(btn => btn.disabled = true);
-      bill.vote = voted;
+    try {
+      const voted = localStorage.getItem('vforkorea_voted_' + bill.billId);
+      const statusSpan = bill.element.querySelector('span.vote-status');
+      const buttons = bill.element.querySelectorAll('.vote-btn');
+      if (voted) {
+        statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
+        statusSpan.style.color = '#888';
+        buttons.forEach(btn => btn.disabled = true);
+        bill.vote = voted;
+        // polling 로그
+        console.log('[패널] polling: 완료 감지', bill.billId, voted);
+      }
+    } catch (e) {
+      console.error('[패널] polling LocalStorage 에러:', e);
     }
   });
 }, 2000);
@@ -807,12 +828,15 @@ function showSuccessNotification() {
     const urlParams = new URLSearchParams(location.search);
     const billId = urlParams.get('billId');
     const voteType = urlParams.get('voteType');
+    console.log('[국회창] postMessage 시도:', { billId, voteType, opener: !!window.opener });
     if (window.opener && billId && voteType) {
       window.opener.postMessage({ type: 'voteSuccess', billId, voteType }, '*');
-      console.log('✅ opener에 voteSuccess 메시지 전송:', { billId, voteType });
+      console.log('[국회창] opener에 voteSuccess 메시지 전송:', { billId, voteType });
+    } else {
+      console.log('[국회창] postMessage 조건 불충족:', { billId, voteType, opener: !!window.opener });
     }
   } catch (e) {
-    console.warn('opener postMessage 실패:', e);
+    console.warn('[국회창] opener postMessage 실패:', e);
   }
 }
 
