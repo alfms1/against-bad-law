@@ -267,31 +267,34 @@ javascript:(function() {
         localStorage.setItem('autoFillData', JSON.stringify({
           title: titleInput,
           content: contentInput,
-          timestamp: Date.now(),
-          bills: selectedBills,
-          currentIndex: 0
+          timestamp: Date.now()
         }));
         
-        // 첫 번째 법안만 열기 (순차 처리)
-        const firstBill = selectedBills[0];
-        const url = new URL(firstBill.link);
-        url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-        url.searchParams.set('autoContent', encodeURIComponent(contentInput));
-        const finalUrl = url.toString();
+        // 각 법안의 링크를 순차적으로 새 탭으로 열기 (URL 파라미터 추가)
+        selectedBills.forEach((bill, index) => {
+          setTimeout(() => {
+            console.log(`${index + 1}번째 법안 열기:`, bill.title);
+            
+            // URL에 파라미터 추가
+            const url = new URL(bill.link);
+            url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
+            url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+            const finalUrl = url.toString();
+            
+            console.log('최종 URL:', finalUrl);
+            
+            // 새 탭으로 열기 (팝업 차단 우회)
+            const link = document.createElement('a');
+            link.href = finalUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }, index * 500); // 0.5초 간격으로 열기
+        });
         
-        console.log('첫 번째 법안 열기:', firstBill.title);
-        console.log('URL:', finalUrl);
-        
-        // 새 탭으로 열기
-        const link = document.createElement('a');
-        link.href = finalUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        alert(`총 ${selectedBills.length}개 법안을 순차적으로 처리합니다.\n첫 번째 창이 열렸습니다. 북마클릿을 클릭하여 진행하세요!`);
+        alert(`${selectedBills.length}개의 탭이 열립니다.\n각 탭에서 북마클릿을 클릭하여 자동 입력하세요!`);
       };
 
       // 취소 버튼
@@ -309,17 +312,13 @@ javascript:(function() {
     const storedData = localStorage.getItem('autoFillData');
     let autoTitle = '';
     let autoContent = '';
-    let bills = [];
-    let currentIndex = 0;
     
     if (storedData) {
       try {
         const data = JSON.parse(storedData);
         autoTitle = data.title || '';
         autoContent = data.content || '';
-        bills = data.bills || [];
-        currentIndex = data.currentIndex || 0;
-        console.log('📦 저장된 데이터 로드:', { autoTitle, autoContent, totalBills: bills.length, currentIndex });
+        console.log('📦 저장된 데이터 로드:', { autoTitle, autoContent });
       } catch (e) {
         console.warn('저장된 데이터 파싱 실패:', e);
       }
@@ -374,75 +373,34 @@ javascript:(function() {
           captchaField.addEventListener('input', function() {
             const value = this.value;
             if (/^\d+$/.test(value) && value.length === 5) {
-              console.log('🚀 캡차 완료, 자동 제출');
+              console.log('🚀 캡차 완료, 자동 제출 시작');
               setTimeout(() => {
                 try {
-                  // 확인창 자동 취소 처리
-                  const originalConfirm = window.confirm;
-                  window.confirm = function(message) {
-                    if (message.includes('의견을 등록하겠습니다') || message.includes('등록')) {
-                      console.log('🚫 등록 확인창 자동 취소');
-                      window.close(); // 창 닫기
-                      return false; // 취소
-                    }
-                    return originalConfirm(message);
-                  };
-                  
                   trimAllInputText();
                   if (!validate()) return;
                   $('.loading_bar').show();
                   checkWebFilter($('#frm'));
+                  
+                  // 제출 후 창 닫기 (확인창 우회)
+                  setTimeout(() => {
+                    console.log('🚪 창 닫기 시도');
+                    window.close();
+                  }, 2000);
+                  
                 } catch (e) {
                   console.warn('자동 제출 실패, 수동 버튼 클릭');
                   document.getElementById('btn_opnReg').click();
+                  
+                  // 수동 클릭 후에도 창 닫기
+                  setTimeout(() => {
+                    window.close();
+                  }, 2000);
                 }
               }, 500);
             }
           });
           captchaField._autoSubmitSet = true;
         }
-      }
-      
-      // 다음 법안 처리 버튼 추가
-      if (bills.length > 1 && currentIndex < bills.length - 1) {
-        const nextButton = document.createElement('button');
-        nextButton.style.cssText = `
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          background: #2196F3;
-          color: white;
-          border: none;
-          padding: 15px 20px;
-          border-radius: 8px;
-          font-size: 14px;
-          cursor: pointer;
-          z-index: 10001;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        `;
-        nextButton.textContent = `다음 법안 (${currentIndex + 2}/${bills.length})`;
-        nextButton.onclick = () => {
-          // 다음 법안 데이터 업데이트
-          const nextIndex = currentIndex + 1;
-          const updatedData = {
-            title: autoTitle,
-            content: autoContent,
-            bills: bills,
-            currentIndex: nextIndex,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('autoFillData', JSON.stringify(updatedData));
-          
-          // 다음 법안 열기
-          const nextBill = bills[nextIndex];
-          const url = new URL(nextBill.link);
-          url.searchParams.set('autoTitle', encodeURIComponent(autoTitle));
-          url.searchParams.set('autoContent', encodeURIComponent(autoContent));
-          
-          window.open(url.toString(), '_blank');
-          window.close(); // 현재 창 닫기
-        };
-        document.body.appendChild(nextButton);
       }
       
       // 성공 알림
@@ -461,18 +419,16 @@ javascript:(function() {
         max-width: 300px;
       `;
       
-      const progressText = bills.length > 1 ? `(${currentIndex + 1}/${bills.length})` : '';
-      
       notification.innerHTML = `
         <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-          🎯 자동 입력 완료! ${progressText}
+          🎯 자동 입력 완료!
         </div>
         <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
           <div><strong>제목:</strong> ${autoTitle.substring(0, 20)}...</div>
           <div style="margin-top: 5px;"><strong>내용:</strong> ${autoContent.substring(0, 30)}...</div>
         </div>
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-          ⚡ <strong>캡차 5자리를 입력하면 자동으로 다음 법안으로 진행됩니다!</strong>
+          ⚡ <strong>캡차 5자리를 입력하면 자동 제출 후 창이 닫힙니다!</strong>
         </div>
         <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
       `;
