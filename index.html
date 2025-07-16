@@ -1,14 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>Vote Launcher</title>
+  <title>Vote Assistant 북마클릿 설치</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; line-height: 1.6; }
+    code { background: #f0f0f0; padding: 0.2em 0.4em; }
+    button { font-size: 1rem; padding: 0.5em 1em; margin-top: 1em; }
+  </style>
 </head>
 <body>
-  <h1>오늘 마감 법안 목록</h1>
-  <ul id="lawList"></ul>
-  <button id="startBtn">선택한 항목 투표 시작</button>
+  <h1>Vote Assistant 북마클릿 설치</h1>
+  <p>
+    아래 버튼을 길게 눌러 즐겨찾기로 등록하세요.<br>
+    그런 다음 <code>vforkorea.com/assem</code> 사이트에서 북마클릿을 실행하면 됩니다.
+  </p>
 
-  <script src="./vote-bookmarklet.js"></script>
+  <a id="bookmarklet" href="#">
+    <button>북마클릿 추가</button>
+  </a>
+
+  <p>또는 아래 링크를 길게 눌러 즐겨찾기 등록:<br>
+    <code id="bookmarklet-code" style="word-break:break-all;"></code>
+  </p>
+
+  <script>
+    const jsURL = 'https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';
+
+    const bookmarkletCode = `javascript:(function(){
+      var s=document.createElement('script');
+      s.src='${jsURL}';
+      document.body.appendChild(s);
+    })();`;
+
+    document.getElementById('bookmarklet').href = bookmarkletCode;
+    document.getElementById('bookmarklet-code').textContent = bookmarkletCode;
+  </script>
 </body>
 </html>
