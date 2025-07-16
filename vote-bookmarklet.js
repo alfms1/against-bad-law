@@ -285,97 +285,76 @@ javascript:(function() {
         
         modalOverlay.remove();
         
-        // LocalStorage에 데이터 저장
-        localStorage.setItem('autoFillData', JSON.stringify({
-          title: titleInput,
-          content: contentInput,
-          timestamp: Date.now()
-        }));
+        // 찬성과 반대 법안 분리
+        const agreeBills = selectedBills.filter(bill => bill.vote === 'agree');
+        const disagreeBills = selectedBills.filter(bill => bill.vote === 'disagree');
         
-        // 사용자 클릭으로 첫 번째 탭 열기 (팝업 차단 우회)
-        if (selectedBills.length > 0) {
-          const firstBill = selectedBills[0];
-          const url = new URL(firstBill.link);
-          url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-          url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+        console.log('처리할 법안들:', {
+          총법안: selectedBills.length,
+          찬성: agreeBills.length,
+          반대: disagreeBills.length
+        });
+        
+        // 찬성 법안들 처리 (찬성 내용으로)
+        if (agreeBills.length > 0) {
+          const agreeTitle = '이 법안에 찬성합니다';
+          const agreeContent = '국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.';
           
-          // 첫 번째는 즉시 열기
-          window.open(url.toString(), '_blank');
-          console.log('1번째 법안 열기:', firstBill.title);
+          // 찬성 법안용 LocalStorage 저장
+          localStorage.setItem('autoFillData_agree', JSON.stringify({
+            title: agreeTitle,
+            content: agreeContent,
+            timestamp: Date.now()
+          }));
           
-          // 나머지는 사용자 액션으로 열기
-          if (selectedBills.length > 1) {
-            // 안내 버튼 표시
-            const openAllButton = document.createElement('div');
-            openAllButton.style.cssText = `
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              background: white;
-              border: 2px solid #4CAF50;
-              padding: 20px;
-              border-radius: 12px;
-              z-index: 10001;
-              box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-              text-align: center;
-              font-family: Arial, sans-serif;
-            `;
+          // 찬성 법안들 즉시 모두 열기
+          agreeBills.forEach((bill, index) => {
+            console.log(`찬성 법안 ${index + 1}/${agreeBills.length}:`, bill.title.substring(0, 30));
             
-            openAllButton.innerHTML = `
-              <h3 style="margin: 0 0 15px 0; color: #333;">🎯 나머지 법안 열기</h3>
-              <p style="margin: 0 0 20px 0; color: #666;">
-                첫 번째 탭이 열렸습니다.<br>
-                나머지 ${selectedBills.length - 1}개 탭을 열까요?
-              </p>
-              <button id="openRemainingTabs" style="
-                background: #4CAF50; 
-                color: white; 
-                border: none; 
-                padding: 12px 24px; 
-                border-radius: 6px; 
-                cursor: pointer; 
-                font-size: 14px; 
-                margin-right: 10px;
-              ">
-                나머지 ${selectedBills.length - 1}개 탭 열기
-              </button>
-              <button onclick="this.parentElement.remove()" style="
-                background: #666; 
-                color: white; 
-                border: none; 
-                padding: 12px 24px; 
-                border-radius: 6px; 
-                cursor: pointer; 
-                font-size: 14px;
-              ">
-                취소
-              </button>
-            `;
+            const url = new URL(bill.link);
+            url.searchParams.set('autoTitle', encodeURIComponent(agreeTitle));
+            url.searchParams.set('autoContent', encodeURIComponent(agreeContent));
+            url.searchParams.set('voteType', 'agree');
             
-            document.body.appendChild(openAllButton);
-            
-            // 나머지 탭 열기 버튼 이벤트
-            document.getElementById('openRemainingTabs').onclick = () => {
-              for (let i = 1; i < selectedBills.length; i++) {
-                const bill = selectedBills[i];
-                const url = new URL(bill.link);
-                url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-                url.searchParams.set('autoContent', encodeURIComponent(contentInput));
-                
-                setTimeout(() => {
-                  window.open(url.toString(), '_blank');
-                  console.log(`${i + 1}번째 법안 열기:`, bill.title);
-                }, i * 200); // 0.2초 간격
-              }
-              
-              openAllButton.remove();
-              alert(`총 ${selectedBills.length}개 탭이 열렸습니다.\n각 탭에서 북마클릿을 클릭하여 자동 입력하세요!`);
-            };
-          } else {
-            alert('1개 탭이 열렸습니다.\n북마클릿을 클릭하여 자동 입력하세요!');
-          }
+            const link = document.createElement('a');
+            link.href = url.toString();
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          });
         }
+        
+        // 반대 법안들 처리 (사용자 입력 내용으로)
+        if (disagreeBills.length > 0) {
+          // 반대 법안용 LocalStorage 저장
+          localStorage.setItem('autoFillData_disagree', JSON.stringify({
+            title: titleInput,
+            content: contentInput,
+            timestamp: Date.now()
+          }));
+          
+          // 반대 법안들 즉시 모두 열기
+          disagreeBills.forEach((bill, index) => {
+            console.log(`반대 법안 ${index + 1}/${disagreeBills.length}:`, bill.title.substring(0, 30));
+            
+            const url = new URL(bill.link);
+            url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
+            url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+            url.searchParams.set('voteType', 'disagree');
+            
+            const link = document.createElement('a');
+            link.href = url.toString();
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          });
+        }
+        
+        alert(`법안 처리 완료!\n찬성: ${agreeBills.length}개\n반대: ${disagreeBills.length}개\n\n각 창에서 북마클릿을 클릭하세요!`);
       };
 
       // 취소 버튼
