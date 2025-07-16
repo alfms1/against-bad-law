@@ -109,7 +109,7 @@
       <button id="start-opinion-registration" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🚀 의견 등록 시작</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
-        새 창에서 Ctrl+V로 북마클릿 실행 후 자동 입력됩니다.
+        🎯 완전 자동화! 새 창에서 2초 후 자동 입력됩니다.
       </div>
     </div>
   `;
@@ -443,22 +443,8 @@
       }
     })();`;
 
-    // 🔧 클립보드에 북마클릿 복사 (강제 복사)
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(bookmarkletCode).then(() => {
-        console.log('✅ 북마클릿 코드 클립보드 복사 성공');
-        console.log('📋 클립보드 내용 미리보기:', bookmarkletCode.substring(0, 100) + '...');
-      }).catch((err) => {
-        console.warn('⚠️ 클립보드 복사 실패:', err);
-        // 수동 복사 방법 안내
-        console.log('📋 수동 복사용 북마클릿:');
-        console.log(bookmarkletCode);
-      });
-    } else {
-      console.warn('⚠️ 클립보드 API 지원되지 않음');
-      console.log('📋 수동 복사용 북마클릿:');
-      console.log(bookmarkletCode);
-    }
+    // 이제 북마클릿이 불필요함 (직접 주입 방식)
+    console.log('✅ 직접 스크립트 주입 방식으로 변경 - 북마클릿 불필요');
 
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
@@ -480,11 +466,9 @@
         <h4>📝 의견 등록 진행 중...</h4>
         <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
         <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
-          🚀 <strong>새 창이 열리면:</strong><br>
-          1️⃣ 주소창 클릭 → <strong>Ctrl+V</strong> → <strong>Enter</strong><br>
-          2️⃣ 만약 안 되면 <strong>F12 → Console</strong>에서 북마클릿 복사하여 실행<br>
-          3️⃣ 자동 입력 후 캡차만 입력하고 등록!
+        <div style="background: #e8f5e8; border: 1px solid #4CAF50; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
+          🚀 <strong>완전 자동화!</strong> 새 창이 열리면 <strong>2초 후 자동으로 입력</strong>됩니다!<br>
+          💡 캡차만 입력하고 등록 버튼을 누르세요!
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
@@ -520,23 +504,111 @@
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
       
-      // 🔧 새로운 방식: 메시지 기반 자동 실행
+      // 🎯 새로운 방식: 새 창에 직접 스크립트 주입
       const win = window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      // 새 창이 로드되면 메시지 전송으로 자동 실행
-      setTimeout(() => {
+      // 새 창이 로드되면 스크립트 주입
+      const injectScript = () => {
         try {
-          // 메시지로 데이터 전달
-          win.postMessage({
-            type: 'AUTO_FILL_FORM',
-            title: titleInput,
-            content: contentInput
-          }, '*');
-          console.log('📤 메시지 전송됨:', { title: titleInput, content: contentInput });
+          const script = win.document.createElement('script');
+          script.textContent = `
+            console.log('🎯 스크립트 주입 성공!');
+            
+            setTimeout(() => {
+              const urlParams = new URLSearchParams(location.search);
+              const autoTitle = decodeURIComponent(urlParams.get('autoTitle') || '');
+              const autoContent = decodeURIComponent(urlParams.get('autoContent') || '');
+              
+              console.log('URL 파라미터:', { autoTitle, autoContent });
+              
+              const titleField = document.querySelector('#txt_sj');
+              const contentField = document.querySelector('#txt_cn');
+              const captchaField = document.querySelector('#catpchaAnswer');
+              
+              console.log('필드 확인:', { titleField: !!titleField, contentField: !!contentField });
+              
+              if (titleField && autoTitle) {
+                titleField.value = autoTitle;
+                titleField.dispatchEvent(new Event('input', { bubbles: true }));
+                titleField.dispatchEvent(new Event('change', { bubbles: true }));
+                titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
+                console.log('✅ 제목 입력:', titleField.value);
+              }
+              
+              if (contentField && autoContent) {
+                contentField.value = autoContent;
+                contentField.dispatchEvent(new Event('input', { bubbles: true }));
+                contentField.dispatchEvent(new Event('change', { bubbles: true }));
+                contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
+                console.log('✅ 내용 입력:', contentField.value);
+              }
+              
+              if (captchaField) {
+                captchaField.focus();
+                captchaField.style.border = '3px solid #ff4444';
+                captchaField.style.background = '#fffacd';
+              }
+              
+              // 성공 알림
+              if (titleField && contentField && autoTitle && autoContent) {
+                const notification = document.createElement('div');
+                notification.style.cssText = \`
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                  color: white;
+                  padding: 20px;
+                  border-radius: 12px;
+                  z-index: 10000;
+                  font-family: Arial, sans-serif;
+                  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                  min-width: 300px;
+                \`;
+                
+                notification.innerHTML = \`
+                  <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+                    🎯 자동 입력 완료!
+                  </div>
+                  <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
+                    <div><strong>제목:</strong> \${autoTitle}</div>
+                    <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
+                  </div>
+                  <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
+                    ⚡ <strong>캡차를 입력</strong>하고 <strong>등록</strong> 후 <strong>창을 닫아주세요!</strong>
+                  </div>
+                  <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer;">✕</button>
+                \`;
+                
+                document.body.appendChild(notification);
+              }
+            }, 2000); // 2초 대기 후 실행
+          `;
+          
+          win.document.head.appendChild(script);
+          console.log('✅ 스크립트 주입 완료');
+          
         } catch (e) {
-          console.warn('메시지 전송 실패:', e);
+          console.error('❌ 스크립트 주입 실패:', e);
+          // 백업: 메시지 방식
+          setTimeout(() => {
+            try {
+              win.postMessage({
+                type: 'AUTO_FILL_FORM',
+                title: titleInput,
+                content: contentInput
+              }, '*');
+            } catch (e2) {
+              console.warn('메시지 전송도 실패:', e2);
+            }
+          }, 3000);
         }
-      }, 3000); // 3초 후 전송
+      };
+      
+      // 새 창 로드 감지
+      win.addEventListener('load', injectScript);
+      setTimeout(injectScript, 2000); // 백업용 지연 실행
+      setTimeout(injectScript, 5000); // 추가 백업
       
       // 🔧 수정된 창 닫힘 감지 (confirm 팝업 제거)
       const checkClosed = setInterval(() => {
