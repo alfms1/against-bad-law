@@ -289,11 +289,15 @@
   function startOpinionProcess(selectedBills, titleInput, contentInput) {
     let currentIndex = 0;
     
-    // 🔧 수정된 북마클릿 코드 (이중 인코딩 문제 해결)
+    // 🔧 수정된 북마클릿 코드 (더 강력한 실행 보장)
     const bookmarkletCode = `javascript:(function(){
       console.log('🎯 자동 의견 입력 시작');
+      console.log('현재 URL:', location.href);
       
       // 이중 인코딩 방지 - URL에서 직접 파라미터 읽기
+      let autoTitle = '';
+      let autoContent = '';
+      
       try {
         const urlParts = location.href.split('?')[1];
         if (urlParts) {
@@ -309,78 +313,105 @@
         autoContent = urlParams.get('autoContent') || '';
       }
       
-      console.log('제목:', autoTitle);
-      console.log('내용:', autoContent);
+      console.log('파싱된 제목:', autoTitle);
+      console.log('파싱된 내용:', autoContent);
       
       function fillForm() {
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         const captchaField = document.querySelector('#catpchaAnswer');
         
+        console.log('제목 필드:', titleField);
+        console.log('내용 필드:', contentField);
+        console.log('캡차 필드:', captchaField);
+        
         if (titleField && autoTitle) {
           titleField.value = autoTitle;
           titleField.dispatchEvent(new Event('input', { bubbles: true }));
-          console.log('✅ 제목 입력 완료');
+          titleField.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('✅ 제목 입력 완료:', autoTitle);
+        } else {
+          console.warn('❌ 제목 입력 실패 - 필드 또는 데이터 없음');
         }
         
         if (contentField && autoContent) {
           contentField.value = autoContent;
           contentField.dispatchEvent(new Event('input', { bubbles: true }));
-          console.log('✅ 내용 입력 완료');
+          contentField.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('✅ 내용 입력 완료:', autoContent);
+        } else {
+          console.warn('❌ 내용 입력 실패 - 필드 또는 데이터 없음');
         }
         
         if (captchaField) {
           captchaField.focus();
           captchaField.style.border = '3px solid #ff4444';
+          captchaField.style.background = '#fffacd';
           console.log('✅ 캡차 포커스');
         }
         
-        const notification = document.createElement('div');
-        notification.style.cssText = \`
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 20px;
-          border-radius: 12px;
-          z-index: 10000;
-          font-family: Arial, sans-serif;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-          min-width: 300px;
-        \`;
-        
-        notification.innerHTML = \`
-          <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-            🎯 자동 입력 완료!
-          </div>
-          <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
-            <div><strong>제목:</strong> \${autoTitle}</div>
-            <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
-          </div>
-          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-            ⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누르세요!
-          </div>
-          <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
-        \`;
-        
-        document.body.appendChild(notification);
+        // 성공 알림 표시
+        if (autoTitle && autoContent) {
+          const notification = document.createElement('div');
+          notification.style.cssText = \`
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            min-width: 300px;
+          \`;
+          
+          notification.innerHTML = \`
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+              🎯 자동 입력 완료!
+            </div>
+            <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
+              <div><strong>제목:</strong> \${autoTitle}</div>
+              <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
+              ⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누른 후 <strong>창을 닫아주세요!</strong>
+            </div>
+            <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
+          \`;
+          
+          document.body.appendChild(notification);
+        } else {
+          // 실패 알림
+          alert('❌ 자동 입력 실패!\\n\\nF12를 누르고 Console 탭에서 오류를 확인하세요.');
+        }
       }
       
       let attempts = 0;
       const tryFill = () => {
         attempts++;
+        console.log(\`시도 \${attempts}/30\`);
+        
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         
         if (titleField && contentField && autoTitle && autoContent) {
+          console.log('✅ 모든 조건 만족, 폼 채우기 시작');
           fillForm();
         } else if (attempts < 30) {
-          setTimeout(tryFill, 300);
+          console.log('⏳ 조건 미달, 재시도...');
+          setTimeout(tryFill, 500);
+        } else {
+          console.error('❌ 30회 시도 후 실패');
+          alert('자동 입력 실패: 페이지 로딩을 기다려주세요');
         }
       };
       
+      // 즉시 시도 + 지연 시도
       tryFill();
+      setTimeout(tryFill, 1000);
+      setTimeout(tryFill, 2000);
     })();`;
 
     // 클립보드에 복사 (에러 처리 개선)
@@ -415,7 +446,8 @@
         <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
         <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
         <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
-          💡 새 창에서 <strong>주소창을 클릭</strong>하고 <strong>Ctrl+V</strong> 후 <strong>Enter</strong>를 누르세요!
+          💡 새 창에서 <strong>주소창을 클릭</strong>하고 <strong>Ctrl+V</strong> 후 <strong>Enter</strong>를 누르세요!<br>
+          🔧 만약 자동 입력이 안 되면 <strong>F12 → Console</strong>에서 다시 Ctrl+V 후 Enter를 눌러주세요.
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
@@ -439,10 +471,14 @@
       
       const bill = selectedBills[currentIndex];
       
-      // 🔧 수정된 URL 생성 (인코딩 없이 직접 추가)
+      // 🔧 수정된 URL 생성 (menuNo 파라미터 정리)
       const baseUrl = bill.link;
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      const fullUrl = `${baseUrl}${separator}autoTitle=${encodeURIComponent(titleInput)}&autoContent=${encodeURIComponent(contentInput)}`;
+      
+      // 기존 URL에서 빈 파라미터 정리
+      let cleanUrl = baseUrl.replace(/menuNo=&/g, '').replace(/&&/g, '&').replace(/\?&/g, '?');
+      
+      const separator = cleanUrl.includes('?') ? '&' : '?';
+      const fullUrl = `${cleanUrl}${separator}autoTitle=${encodeURIComponent(titleInput)}&autoContent=${encodeURIComponent(contentInput)}`;
       
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
