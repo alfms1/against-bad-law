@@ -793,6 +793,32 @@ captchaField._smartCaptchaSet = true;
 }
 }
 
+// pal.assembly.go.kr에서만 실행
+if (currentDomain === 'pal.assembly.go.kr') {
+  // confirm 후킹: 특정 메시지면 자동 취소 + 탭 닫기
+  const originalConfirm = window.confirm;
+  window.confirm = function(msg) {
+    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
+      setTimeout(() => {
+        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+      }, 200);
+      return false; // '취소' 선택
+    }
+    return originalConfirm.call(this, msg);
+  };
+
+  // alert도 혹시 모르니 후킹
+  const originalAlert = window.alert;
+  window.alert = function(msg) {
+    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
+      setTimeout(() => {
+        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+      }, 200);
+    }
+    return originalAlert.call(this, msg);
+  };
+}
+
 // 초기 성공 알림
 const notification = document.createElement('div');
 notification.style.cssText = `
