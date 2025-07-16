@@ -127,11 +127,33 @@ controlPanel.appendChild(header);
 const billsList = document.createElement('div');
 const bills = [];
 
+// --- postMessage 수신: 의견 등록 성공 시 체크표시/비활성화 ---
+window.addEventListener('message', function(event) {
+  if (!event.data || event.data.type !== 'voteSuccess') return;
+  const { billId, voteType } = event.data;
+  if (!billId || !voteType) return;
+  // LocalStorage에 기록
+  localStorage.setItem('vforkorea_voted_' + billId, voteType);
+  // 패널 UI 갱신
+  const billIdx = bills.findIndex(b => b.billId == billId);
+  if (billIdx !== -1) {
+    const bill = bills[billIdx];
+    const statusSpan = bill.element.querySelector('span.vote-status');
+    statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
+    statusSpan.style.color = '#888';
+    // 버튼 비활성화
+    const buttons = bill.element.querySelectorAll('.vote-btn');
+    buttons.forEach(btn => btn.disabled = true);
+    bill.vote = voteType; // 내부 상태도 갱신
+  }
+});
+
 todayRows.forEach((tr, index) => {
 const titleElement = tr.querySelector('.content .t');
 const voteLink = tr.querySelector('a[href*="forInsert.do"]');
+const billId = tr.getAttribute('data-idx');
 
-if (!titleElement || !voteLink) {
+if (!titleElement || !voteLink || !billId) {
 console.warn('필요한 요소를 찾을 수 없습니다:', tr);
 return;
 }
@@ -161,11 +183,22 @@ ${shortTitle}
 
 billsList.appendChild(billItem);
 
+// --- 이미 완료된 투표 체크 ---
+const voted = localStorage.getItem('vforkorea_voted_' + billId);
+if (voted) {
+  const statusSpan = billItem.querySelector('span.vote-status');
+  statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
+  statusSpan.style.color = '#888';
+  const buttons = billItem.querySelectorAll('.vote-btn');
+  buttons.forEach(btn => btn.disabled = true);
+}
+
 bills.push({
 title: title,
 link: voteLink.href,
 vote: null,
-element: billItem
+element: billItem,
+billId: billId
 });
 });
 
@@ -753,6 +786,19 @@ function showSuccessNotification() {
   `;
   
   document.body.appendChild(notification);
+
+  // --- postMessage로 opener(원래 창)에 성공 알림 전송 ---
+  try {
+    const urlParams = new URLSearchParams(location.search);
+    const billId = urlParams.get('billId');
+    const voteType = urlParams.get('voteType');
+    if (window.opener && billId && voteType) {
+      window.opener.postMessage({ type: 'voteSuccess', billId, voteType }, '*');
+      console.log('✅ opener에 voteSuccess 메시지 전송:', { billId, voteType });
+    }
+  } catch (e) {
+    console.warn('opener postMessage 실패:', e);
+  }
 }
 
 // 알 수 없는 Alert 메시지 알림
