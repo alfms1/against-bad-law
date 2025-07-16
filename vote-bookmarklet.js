@@ -1,7 +1,11 @@
 (() => {
-  console.log('스크립트 시작...');
+  console.log('🎯 새로운 의견 등록 스크립트 시작...');
   
-  // 1. 오늘 마감된 행들을 더 정확하게 찾기
+  // 기존 패널 제거
+  const existingPanel = document.querySelector('#vote-control-panel');
+  if (existingPanel) existingPanel.remove();
+  
+  // 1. 오늘 마감된 행들 찾기
   const todayRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
     const redSpan = tr.querySelector('td span.red');
     const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
@@ -41,7 +45,7 @@
   // 3. 헤더
   const header = document.createElement('div');
   header.innerHTML = `
-    <h3 style="margin: 0 0 15px 0; color: #333;">오늘 마감 법안 (${todayRows.length}건)</h3>
+    <h3 style="margin: 0 0 15px 0; color: #333;">📝 오늘 마감 법안 (${todayRows.length}건)</h3>
     <div style="margin-bottom: 15px;">
       <button id="select-all-agree" style="padding: 5px 10px; margin-right: 5px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 찬성</button>
       <button id="select-all-disagree" style="padding: 5px 10px; margin-right: 5px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 반대</button>
@@ -102,11 +106,10 @@
   const actionButtons = document.createElement('div');
   actionButtons.innerHTML = `
     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">📝 선택한 법안에 의견 등록하기</button>
+      <button id="start-opinion-registration" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🚀 의견 등록 시작</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
-        새 창에서 제목/내용이 자동 입력됩니다.<br>
-        캡차만 입력하고 의견을 등록한 후 창을 닫아주세요.
+        새 창에서 Ctrl+V로 자동 입력 후 캡차만 입력하세요.
       </div>
     </div>
   `;
@@ -128,7 +131,6 @@
       statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
       statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
 
-      // 같은 법안의 다른 버튼들 스타일 업데이트
       const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
       const buttons = billDiv.querySelectorAll('.vote-btn');
       buttons.forEach(btn => {
@@ -188,8 +190,8 @@
     controlPanel.remove();
   };
 
-  // 7. 의견 등록 실행 (여기가 핵심 수정 부분!)
-  document.getElementById('start-voting').onclick = () => {
+  // 7. 🚀 새로운 의견 등록 시스템
+  document.getElementById('start-opinion-registration').onclick = () => {
     const selectedBills = bills.filter(bill => bill.vote !== null);
     
     if (!selectedBills.length) {
@@ -197,11 +199,151 @@
       return;
     }
 
-    if (!confirm(`${selectedBills.length}개 법안에 의견을 등록하시겠습니까?`)) {
-      return;
-    }
+    // 입력 모달 생성
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 20000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    `;
 
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 90%;
+      font-family: Arial, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <h3 style="margin: 0 0 20px 0; color: #333; text-align: center;">📝 의견 입력</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">제목:</label>
+        <input type="text" id="modal-title" placeholder="예: 이 법안을 반대합니다" 
+               style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;"
+               value="이 법안을 반대합니다">
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">내용:</label>
+        <textarea id="modal-content" placeholder="예: 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다"
+                  style="width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;">국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.</textarea>
+      </div>
+      <div style="text-align: center;">
+        <button id="modal-ok" style="background: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 6px; margin-right: 10px; cursor: pointer; font-size: 14px; font-weight: bold;">확인 (${selectedBills.length}개 법안)</button>
+        <button id="modal-cancel" style="background: #f44336; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">취소</button>
+      </div>
+      <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 6px; font-size: 12px; color: #666;">
+        💡 모든 선택된 법안에 동일한 제목과 내용으로 의견이 등록됩니다.
+      </div>
+    `;
+
+    modalOverlay.appendChild(modal);
+    document.body.appendChild(modalOverlay);
+
+    setTimeout(() => document.getElementById('modal-title').focus(), 100);
+
+    // 확인 버튼
+    document.getElementById('modal-ok').onclick = () => {
+      const titleInput = document.getElementById('modal-title').value.trim();
+      const contentInput = document.getElementById('modal-content').value.trim();
+      
+      if (!titleInput) {
+        alert('제목을 입력해주세요.');
+        document.getElementById('modal-title').focus();
+        return;
+      }
+      
+      if (!contentInput) {
+        alert('내용을 입력해주세요.');
+        document.getElementById('modal-content').focus();
+        return;
+      }
+      
+      modalOverlay.remove();
+      startOpinionProcess(selectedBills, titleInput, contentInput);
+    };
+
+    // 취소 버튼
+    document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
+
+    // ESC로 닫기
+    document.addEventListener('keydown', function escHandler(e) {
+      if (e.key === 'Escape') {
+        modalOverlay.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    });
+  };
+
+  // 8. 🎯 실제 의견 등록 프로세스
+  function startOpinionProcess(selectedBills, titleInput, contentInput) {
     let currentIndex = 0;
+    
+    // 북마클릿 코드 생성
+    const bookmarkletCode = `javascript:(function(){
+      console.log('🎯 자동 의견 입력 시작');
+      
+      const urlParams = new URLSearchParams(location.search);
+      const autoTitle = decodeURIComponent(urlParams.get('autoTitle') || '${encodeURIComponent(titleInput)}');
+      const autoContent = decodeURIComponent(urlParams.get('autoContent') || '${encodeURIComponent(contentInput)}');
+      
+      function fillForm() {
+        const titleField = document.querySelector('#txt_sj');
+        const contentField = document.querySelector('#txt_cn');
+        const captchaField = document.querySelector('#catpchaAnswer');
+        
+        if (titleField) {
+          titleField.value = autoTitle;
+          titleField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        if (contentField) {
+          contentField.value = autoContent;
+          contentField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        if (captchaField) {
+          captchaField.focus();
+          captchaField.style.border = '3px solid #ff4444';
+        }
+        
+        const notification = document.createElement('div');
+        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; z-index: 10000; font-family: Arial, sans-serif; box-shadow: 0 8px 25px rgba(0,0,0,0.2); min-width: 300px;';
+        notification.innerHTML = '<div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">🎯 자동 입력 완료!</div><div style="font-size: 13px; opacity: 0.9; line-height: 1.4;"><div><strong>제목:</strong> ' + autoTitle + '</div><div style="margin-top: 5px;"><strong>내용:</strong> ' + autoContent.substring(0, 50) + (autoContent.length > 50 ? '...' : '') + '</div></div><div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누른 후 <strong>창을 닫아주세요</strong></div><button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>';
+        document.body.appendChild(notification);
+      }
+      
+      let attempts = 0;
+      const tryFill = () => {
+        attempts++;
+        const titleField = document.querySelector('#txt_sj');
+        const contentField = document.querySelector('#txt_cn');
+        
+        if (titleField && contentField) {
+          fillForm();
+        } else if (attempts < 30) {
+          setTimeout(tryFill, 300);
+        }
+      };
+      
+      tryFill();
+    })();`;
+
+    // 클립보드에 복사
+    navigator.clipboard.writeText(bookmarkletCode).catch(() => {
+      console.log('클립보드 복사 실패');
+    });
+
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
       position: fixed;
@@ -214,14 +356,18 @@
       border-radius: 8px;
       z-index: 10001;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      min-width: 350px;
     `;
     
     const updateStatus = () => {
       statusDiv.innerHTML = `
-        <h4>의견 등록 진행 중...</h4>
-        <p>진행률: ${currentIndex}/${selectedBills.length}</p>
-        <p>현재: ${selectedBills[currentIndex]?.title.substring(0, 50)}...</p>
-        <button onclick="this.parentElement.remove()">취소</button>
+        <h4>📝 의견 등록 진행 중...</h4>
+        <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
+        <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
+          💡 새 창에서 <strong>주소창을 클릭</strong>하고 <strong>Ctrl+V</strong> 후 <strong>Enter</strong>를 누르세요!
+        </div>
+        <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
     };
 
@@ -229,8 +375,12 @@
       if (currentIndex >= selectedBills.length) {
         statusDiv.innerHTML = `
           <h4>✅ 모든 의견 등록이 완료되었습니다!</h4>
-          <p>총 ${selectedBills.length}개 법안에 의견을 등록했습니다.</p>
-          <button onclick="this.parentElement.remove()">확인</button>
+          <p>총 <strong>${selectedBills.length}개</strong> 법안에 의견을 등록했습니다.</p>
+          <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 12px;">
+            <div><strong>제목:</strong> ${titleInput}</div>
+            <div style="margin-top: 5px;"><strong>내용:</strong> ${contentInput}</div>
+          </div>
+          <button onclick="this.parentElement.remove()" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px;">확인</button>
         `;
         return;
       }
@@ -238,134 +388,35 @@
       updateStatus();
       
       const bill = selectedBills[currentIndex];
-      const voteParam = bill.vote === 'agree' ? 'Y' : 'N';
-      const fullUrl = `${bill.link}&opinion=${voteParam}`;
       
-      console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title, `(${bill.vote})`);
-      console.log('열리는 URL:', fullUrl);
+      // 🎯 올바른 URL 생성 (autoTitle, autoContent 파라미터)
+      const baseUrl = bill.link;
+      const url = new URL(baseUrl);
+      url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
+      url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+      const fullUrl = url.toString();
       
-      const win = window.open(fullUrl, `vote_${currentIndex}`, 'width=1200,height=800');
+      console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
+      console.log('새로운 URL:', fullUrl);
       
-      // 🔥 새 창에 자동 입력 스크립트 주입 (핵심 추가 부분!)
-      setTimeout(() => {
-        try {
-          if (win && !win.closed && win.document) {
-            console.log('새 창에 자동 입력 스크립트 주입 중...');
-            
-            const script = win.document.createElement('script');
-            script.textContent = `
-              (() => {
-                console.log('자동 입력 스크립트 실행됨');
-                
-                const opinionParam = new URLSearchParams(location.search).get("opinion");
-                const agree = opinionParam === "Y";
-                const isValid = opinionParam === "Y" || opinionParam === "N";
-                
-                console.log('opinion 파라미터:', opinionParam, '찬성여부:', agree);
-                
-                if (!isValid) {
-                  console.log('유효하지 않은 opinion 파라미터');
-                  return;
-                }
-
-                function fillForm() {
-                  console.log('폼 입력 시작...');
-                  
-                  const sj = document.querySelector('#txt_sj');
-                  const cn = document.querySelector('#txt_cn');
-                  const captcha = document.querySelector('#catpchaAnswer');
-                  
-                  if (sj) {
-                    sj.value = agree ? '찬성합니다' : '반대합니다';
-                    console.log('제목 입력:', sj.value);
-                  } else {
-                    console.log('제목 입력란(#txt_sj)을 찾을 수 없음');
-                  }
-                  
-                  if (cn) {
-                    cn.value = agree ? '이 법률안을 찬성합니다.' : '이 법률안을 반대합니다.';
-                    console.log('내용 입력:', cn.value);
-                  } else {
-                    console.log('내용 입력란(#txt_cn)을 찾을 수 없음');
-                  }
-                  
-                  if (captcha) {
-                    captcha.focus();
-                    console.log('캡차 입력란에 포커스');
-                  } else {
-                    console.log('캡차 입력란(#catpchaAnswer)을 찾을 수 없음');
-                  }
-                  
-                  // 상태 표시 박스 생성
-                  const statusBox = document.createElement('div');
-                  statusBox.style.cssText = \`
-                    position: fixed;
-                    top: 20px;
-                    left: 20px;
-                    background: \${agree ? '#4caf50' : '#f44336'};
-                    color: white;
-                    padding: 15px;
-                    border-radius: 8px;
-                    z-index: 9999;
-                    font-weight: bold;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                  \`;
-                  statusBox.innerHTML = \`
-                    <div>\${agree ? '✅ 찬성 의견' : '❌ 반대 의견'} 자동 입력됨</div>
-                    <div style="font-size: 12px; margin-top: 5px;">캡차를 입력하고 등록하세요</div>
-                    <button onclick="this.parentElement.remove()" style="margin-top: 8px; padding: 4px 8px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
-                  \`;
-                  document.body.appendChild(statusBox);
-                }
-
-                // 페이지 로딩 대기
-                let attempts = 0;
-                const waitForElements = () => {
-                  attempts++;
-                  const sj = document.querySelector('#txt_sj');
-                  const cn = document.querySelector('#txt_cn');
-                  
-                  console.log(\`시도 \${attempts}: 제목 입력란 \${sj ? '발견' : '없음'}, 내용 입력란 \${cn ? '발견' : '없음'}\`);
-                  
-                  if (sj && cn) {
-                    fillForm();
-                  } else if (attempts < 20) {
-                    setTimeout(waitForElements, 500);
-                  } else {
-                    console.log('입력란을 찾을 수 없습니다. 수동으로 입력해주세요.');
-                  }
-                };
-
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', waitForElements);
-                } else {
-                  waitForElements();
-                }
-              })();
-            `;
-            
-            win.document.head.appendChild(script);
-            console.log('스크립트 주입 완료');
-          } else {
-            console.log('새 창 접근 실패 - CORS 제한일 수 있음');
-          }
-        } catch (e) {
-          console.log('스크립트 주입 실패:', e.message);
-        }
-      }, 2000);
+      window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      const checkClosed = setInterval(() => {
-        if (win.closed) {
-          clearInterval(checkClosed);
+      // 창이 닫히면 다음으로 진행
+      const checkNext = () => {
+        if (confirm('현재 창에서 의견 등록을 완료했습니까?')) {
           currentIndex++;
-          setTimeout(openNext, 1000); // 1초 대기 후 다음 진행
+          setTimeout(openNext, 500);
+        } else {
+          setTimeout(checkNext, 2000);
         }
-      }, 500);
+      };
+      
+      setTimeout(checkNext, 3000);
     };
 
     document.body.appendChild(statusDiv);
     openNext();
-  };
+  }
 
-  console.log('스크립트 설정 완료. 우측 상단의 패널을 확인하세요.');
+  console.log('🎯 새로운 스크립트 설정 완료!');
 })();
