@@ -109,7 +109,7 @@
       <button id="start-opinion-registration" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🚀 의견 등록 시작</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
-        🚀 새 창에서 자동으로 입력됩니다! 캡차만 입력하세요.
+        새 창에서 Ctrl+V로 북마클릿 실행 후 자동 입력됩니다.
       </div>
     </div>
   `;
@@ -289,58 +289,81 @@
   function startOpinionProcess(selectedBills, titleInput, contentInput) {
     let currentIndex = 0;
     
-    // 🔧 수정된 북마클릿 코드 (더 강력한 실행 보장)
+    // 🔧 새로운 방식: URL 해시에 데이터 저장 + 페이지 내 스크립트 주입
     const bookmarkletCode = `javascript:(function(){
-      console.log('🎯 자동 의견 입력 시작');
-      console.log('현재 URL:', location.href);
+      console.log('🎯 해시 기반 자동 의견 입력 시작');
       
-      // 이중 인코딩 방지 - URL에서 직접 파라미터 읽기
-      let autoTitle = '';
-      let autoContent = '';
+      // URL 파라미터에서 데이터 읽기
+      const urlParams = new URLSearchParams(location.search);
+      let autoTitle = urlParams.get('autoTitle') || '';
+      let autoContent = urlParams.get('autoContent') || '';
       
+      // 디코딩 처리
       try {
-        const urlParts = location.href.split('?')[1];
-        if (urlParts) {
-          const params = new URLSearchParams(urlParts);
-          autoTitle = params.get('autoTitle') || '';
-          autoContent = params.get('autoContent') || '';
-        }
+        autoTitle = decodeURIComponent(autoTitle);
       } catch(e) {
-        console.log('URL 파싱 오류:', e);
-        // 기존 방식으로 fallback
-        const urlParams = new URLSearchParams(location.search);
-        autoTitle = urlParams.get('autoTitle') || '';
-        autoContent = urlParams.get('autoContent') || '';
+        console.log('제목 디코딩 오류:', e);
       }
       
-      console.log('파싱된 제목:', autoTitle);
-      console.log('파싱된 내용:', autoContent);
+      try {
+        autoContent = decodeURIComponent(autoContent);
+      } catch(e) {
+        console.log('내용 디코딩 오류:', e);
+      }
+      
+      console.log('📥 받은 데이터:', { autoTitle, autoContent });
+      
+      // 메시지 리스너 추가
+      window.addEventListener('message', function(event) {
+        if (event.data.type === 'AUTO_FILL_FORM') {
+          console.log('📨 메시지 수신:', event.data);
+          autoTitle = event.data.title;
+          autoContent = event.data.content;
+          setTimeout(fillForm, 1000);
+        }
+      });
       
       function fillForm() {
+        console.log('🎯 폼 채우기 시작:', { autoTitle, autoContent });
+        
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         const captchaField = document.querySelector('#catpchaAnswer');
         
-        console.log('제목 필드:', titleField);
-        console.log('내용 필드:', contentField);
-        console.log('캡차 필드:', captchaField);
+        console.log('📋 필드 확인:', {
+          titleField: !!titleField,
+          contentField: !!contentField,
+          captchaField: !!captchaField
+        });
         
         if (titleField && autoTitle) {
           titleField.value = autoTitle;
           titleField.dispatchEvent(new Event('input', { bubbles: true }));
           titleField.dispatchEvent(new Event('change', { bubbles: true }));
+          titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
+          
+          // 바이트 계산 함수 직접 호출
+          if (window.inputLimitByteChecked) {
+            const lengthEl = document.querySelector('#reqTitleLen');
+            if (lengthEl) inputLimitByteChecked(titleField, $(lengthEl));
+          }
+          
           console.log('✅ 제목 입력 완료:', autoTitle);
-        } else {
-          console.warn('❌ 제목 입력 실패 - 필드 또는 데이터 없음');
         }
         
         if (contentField && autoContent) {
           contentField.value = autoContent;
           contentField.dispatchEvent(new Event('input', { bubbles: true }));
           contentField.dispatchEvent(new Event('change', { bubbles: true }));
+          contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
+          
+          // 바이트 계산 함수 직접 호출
+          if (window.inputLimitByteChecked) {
+            const lengthEl = document.querySelector('#reqContentLen');
+            if (lengthEl) inputLimitByteChecked(contentField, $(lengthEl));
+          }
+          
           console.log('✅ 내용 입력 완료:', autoContent);
-        } else {
-          console.warn('❌ 내용 입력 실패 - 필드 또는 데이터 없음');
         }
         
         if (captchaField) {
@@ -351,7 +374,7 @@
         }
         
         // 성공 알림 표시
-        if (autoTitle && autoContent) {
+        if (titleField && contentField && autoTitle && autoContent) {
           const notification = document.createElement('div');
           notification.style.cssText = \`
             position: fixed;
@@ -383,39 +406,53 @@
           
           document.body.appendChild(notification);
         } else {
-          // 실패 알림
-          alert('❌ 자동 입력 실패!\\n\\nF12를 누르고 Console 탭에서 오류를 확인하세요.');
+          console.error('❌ 자동 입력 실패');
+          alert('자동 입력 실패: F12 → Console 확인');
         }
       }
       
+      // 여러 번 시도하여 폼 채우기
       let attempts = 0;
       const tryFill = () => {
         attempts++;
-        console.log(\`시도 \${attempts}/30\`);
+        console.log(\`🔄 시도 \${attempts}/25\`);
         
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
         
-        if (titleField && contentField && autoTitle && autoContent) {
-          console.log('✅ 모든 조건 만족, 폼 채우기 시작');
+        if (titleField && contentField && (autoTitle || autoContent)) {
+          console.log('✅ 조건 만족, 폼 채우기 실행');
           fillForm();
-        } else if (attempts < 30) {
-          console.log('⏳ 조건 미달, 재시도...');
-          setTimeout(tryFill, 500);
+        } else if (attempts < 25) {
+          console.log('⏳ 재시도...');
+          setTimeout(tryFill, 600);
         } else {
-          console.error('❌ 30회 시도 후 실패');
-          alert('자동 입력 실패: 페이지 로딩을 기다려주세요');
+          console.error('❌ 25회 시도 후 실패');
+          alert('자동 입력 실패: 페이지 로딩 문제');
         }
       };
       
-      // 즉시 시도 + 지연 시도
-      tryFill();
-      setTimeout(tryFill, 1000);
-      setTimeout(tryFill, 2000);
+      // 즉시 시작
+      if (document.readyState === 'complete') {
+        tryFill();
+      } else {
+        window.addEventListener('load', tryFill);
+        setTimeout(tryFill, 1000);
+        setTimeout(tryFill, 3000);
+        setTimeout(tryFill, 5000);
+      }
     })();`;
 
-    // 클립보드 복사는 제거 (이제 필요 없음)
-    console.log('✅ 자동 실행 방식으로 변경됨 - 클립보드 불필요');
+    // 🔧 클립보드에 북마클릿 복사 (다시 활성화)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(bookmarkletCode).then(() => {
+        console.log('✅ 북마클릿 코드 클립보드 복사 성공');
+      }).catch((err) => {
+        console.warn('⚠️ 클립보드 복사 실패:', err);
+      });
+    } else {
+      console.warn('⚠️ 클립보드 API 지원되지 않음');
+    }
 
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
@@ -438,8 +475,9 @@
         <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
         <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
         <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
-          🚀 <strong>새 창이 열리면 자동으로 입력됩니다!</strong><br>
-          💡 만약 자동 입력이 안 되면 <strong>F12 → Console</strong>에서 오류를 확인하세요.
+          🚀 <strong>새 창이 열리면:</strong><br>
+          1️⃣ 주소창 클릭 → <strong>Ctrl+V</strong> → <strong>Enter</strong><br>
+          2️⃣ 자동 입력 후 캡차만 입력하고 등록!
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
@@ -475,121 +513,23 @@
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
       
+      // 🔧 새로운 방식: 메시지 기반 자동 실행
       const win = window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      // 🔧 새 창에서 자동으로 북마클릿 실행
-      win.addEventListener('load', () => {
-        setTimeout(() => {
-          // 새 창에서 직접 스크립트 실행
-          win.eval(`
-            (function(){
-              console.log('🎯 자동 의견 입력 시작 - 직접 실행');
-              
-              const urlParams = new URLSearchParams(location.search);
-              const autoTitle = urlParams.get('autoTitle') || '';
-              const autoContent = urlParams.get('autoContent') || '';
-              
-              console.log('파싱된 제목:', autoTitle);
-              console.log('파싱된 내용:', autoContent);
-              
-              function fillForm() {
-                const titleField = document.querySelector('#txt_sj');
-                const contentField = document.querySelector('#txt_cn');
-                const captchaField = document.querySelector('#catpchaAnswer');
-                
-                console.log('제목 필드:', titleField);
-                console.log('내용 필드:', contentField);
-                
-                if (titleField && autoTitle) {
-                  titleField.value = autoTitle;
-                  titleField.dispatchEvent(new Event('input', { bubbles: true }));
-                  titleField.dispatchEvent(new Event('change', { bubbles: true }));
-                  titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
-                  console.log('✅ 제목 입력 완료:', autoTitle);
-                }
-                
-                if (contentField && autoContent) {
-                  contentField.value = autoContent;
-                  contentField.dispatchEvent(new Event('input', { bubbles: true }));
-                  contentField.dispatchEvent(new Event('change', { bubbles: true }));
-                  contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
-                  console.log('✅ 내용 입력 완료:', autoContent);
-                }
-                
-                if (captchaField) {
-                  captchaField.focus();
-                  captchaField.style.border = '3px solid #ff4444';
-                  captchaField.style.background = '#fffacd';
-                  console.log('✅ 캡차 포커스');
-                }
-                
-                // 성공 알림 표시
-                if (titleField && contentField && autoTitle && autoContent) {
-                  const notification = document.createElement('div');
-                  notification.style.cssText = \`
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 20px;
-                    border-radius: 12px;
-                    z-index: 10000;
-                    font-family: Arial, sans-serif;
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-                    min-width: 300px;
-                  \`;
-                  
-                  notification.innerHTML = \`
-                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-                      🎯 자동 입력 완료!
-                    </div>
-                    <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
-                      <div><strong>제목:</strong> \${autoTitle}</div>
-                      <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
-                    </div>
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-                      ⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누른 후 <strong>창을 닫아주세요!</strong>
-                    </div>
-                    <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
-                  \`;
-                  
-                  document.body.appendChild(notification);
-                } else {
-                  alert('❌ 자동 입력 실패! F12에서 Console 확인하세요.');
-                }
-              }
-              
-              // 여러 번 시도
-              let attempts = 0;
-              const tryFill = () => {
-                attempts++;
-                console.log(\`시도 \${attempts}/20\`);
-                
-                const titleField = document.querySelector('#txt_sj');
-                const contentField = document.querySelector('#txt_cn');
-                
-                if (titleField && contentField && autoTitle && autoContent) {
-                  console.log('✅ 모든 조건 만족, 폼 채우기 시작');
-                  fillForm();
-                } else if (attempts < 20) {
-                  console.log('⏳ 조건 미달, 재시도...');
-                  setTimeout(tryFill, 500);
-                } else {
-                  console.error('❌ 20회 시도 후 실패');
-                  alert('자동 입력 실패: 페이지가 아직 로딩 중입니다');
-                }
-              };
-              
-              // 즉시 시도 + 지연 시도
-              tryFill();
-              setTimeout(tryFill, 1000);
-              setTimeout(tryFill, 2000);
-              setTimeout(tryFill, 3000);
-            })();
-          `);
-        }, 2000); // 2초 후 실행
-      });
+      // 새 창이 로드되면 메시지 전송으로 자동 실행
+      setTimeout(() => {
+        try {
+          // 메시지로 데이터 전달
+          win.postMessage({
+            type: 'AUTO_FILL_FORM',
+            title: titleInput,
+            content: contentInput
+          }, '*');
+          console.log('📤 메시지 전송됨:', { title: titleInput, content: contentInput });
+        } catch (e) {
+          console.warn('메시지 전송 실패:', e);
+        }
+      }, 3000); // 3초 후 전송
       
       // 🔧 수정된 창 닫힘 감지 (confirm 팝업 제거)
       const checkClosed = setInterval(() => {
