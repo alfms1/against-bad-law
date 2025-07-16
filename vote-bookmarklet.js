@@ -443,15 +443,21 @@
       }
     })();`;
 
-    // 🔧 클립보드에 북마클릿 복사 (다시 활성화)
+    // 🔧 클립보드에 북마클릿 복사 (강제 복사)
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(bookmarkletCode).then(() => {
         console.log('✅ 북마클릿 코드 클립보드 복사 성공');
+        console.log('📋 클립보드 내용 미리보기:', bookmarkletCode.substring(0, 100) + '...');
       }).catch((err) => {
         console.warn('⚠️ 클립보드 복사 실패:', err);
+        // 수동 복사 방법 안내
+        console.log('📋 수동 복사용 북마클릿:');
+        console.log(bookmarkletCode);
       });
     } else {
       console.warn('⚠️ 클립보드 API 지원되지 않음');
+      console.log('📋 수동 복사용 북마클릿:');
+      console.log(bookmarkletCode);
     }
 
     const statusDiv = document.createElement('div');
@@ -477,7 +483,8 @@
         <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
           🚀 <strong>새 창이 열리면:</strong><br>
           1️⃣ 주소창 클릭 → <strong>Ctrl+V</strong> → <strong>Enter</strong><br>
-          2️⃣ 자동 입력 후 캡차만 입력하고 등록!
+          2️⃣ 만약 안 되면 <strong>F12 → Console</strong>에서 북마클릿 복사하여 실행<br>
+          3️⃣ 자동 입력 후 캡차만 입력하고 등록!
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
