@@ -27,14 +27,16 @@ javascript:(function() {
       return;
     }
 
-    // 2. 컨트롤 패널 생성
+    // 2. 컨트롤 패널 생성 (모바일 최적화)
     const controlPanel = document.createElement('div');
     controlPanel.id = 'vote-control-panel';
+    const isMobile = window.innerWidth <= 768;
     Object.assign(controlPanel.style, {
       position: 'fixed',
-      top: '20px',
-      right: '20px',
-      width: '350px',
+      top: isMobile ? '10px' : '20px',
+      right: isMobile ? '10px' : '20px',
+      left: isMobile ? '10px' : 'auto',
+      width: isMobile ? 'auto' : '350px',
       maxHeight: '80vh',
       overflowY: 'auto',
       background: 'white',
@@ -44,7 +46,7 @@ javascript:(function() {
       zIndex: '10000',
       boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       fontFamily: 'Arial, sans-serif',
-      fontSize: '14px'
+      fontSize: isMobile ? '16px' : '14px'
     });
 
     // 3. 헤더
@@ -221,12 +223,14 @@ javascript:(function() {
       const modal = document.createElement('div');
       modal.style.cssText = `
         background: white;
-        padding: 30px;
+        padding: ${isMobile ? '20px' : '30px'};
         border-radius: 12px;
         box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        max-width: 500px;
+        max-width: ${isMobile ? '95%' : '500px'};
         width: 90%;
         font-family: Arial, sans-serif;
+        max-height: 80vh;
+        overflow-y: auto;
       `;
 
       modal.innerHTML = `
@@ -270,31 +274,90 @@ javascript:(function() {
           timestamp: Date.now()
         }));
         
-        // 각 법안의 링크를 순차적으로 새 탭으로 열기 (URL 파라미터 추가)
-        selectedBills.forEach((bill, index) => {
-          setTimeout(() => {
-            console.log(`${index + 1}번째 법안 열기:`, bill.title);
+        // 사용자 클릭으로 첫 번째 탭 열기 (팝업 차단 우회)
+        if (selectedBills.length > 0) {
+          const firstBill = selectedBills[0];
+          const url = new URL(firstBill.link);
+          url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
+          url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+          
+          // 첫 번째는 즉시 열기
+          window.open(url.toString(), '_blank');
+          console.log('1번째 법안 열기:', firstBill.title);
+          
+          // 나머지는 사용자 액션으로 열기
+          if (selectedBills.length > 1) {
+            // 안내 버튼 표시
+            const openAllButton = document.createElement('div');
+            openAllButton.style.cssText = `
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: white;
+              border: 2px solid #4CAF50;
+              padding: 20px;
+              border-radius: 12px;
+              z-index: 10001;
+              box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+              text-align: center;
+              font-family: Arial, sans-serif;
+            `;
             
-            // URL에 파라미터 추가
-            const url = new URL(bill.link);
-            url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-            url.searchParams.set('autoContent', encodeURIComponent(contentInput));
-            const finalUrl = url.toString();
+            openAllButton.innerHTML = `
+              <h3 style="margin: 0 0 15px 0; color: #333;">🎯 나머지 법안 열기</h3>
+              <p style="margin: 0 0 20px 0; color: #666;">
+                첫 번째 탭이 열렸습니다.<br>
+                나머지 ${selectedBills.length - 1}개 탭을 열까요?
+              </p>
+              <button id="openRemainingTabs" style="
+                background: #4CAF50; 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 6px; 
+                cursor: pointer; 
+                font-size: 14px; 
+                margin-right: 10px;
+              ">
+                나머지 ${selectedBills.length - 1}개 탭 열기
+              </button>
+              <button onclick="this.parentElement.remove()" style="
+                background: #666; 
+                color: white; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 6px; 
+                cursor: pointer; 
+                font-size: 14px;
+              ">
+                취소
+              </button>
+            `;
             
-            console.log('최종 URL:', finalUrl);
+            document.body.appendChild(openAllButton);
             
-            // 새 탭으로 열기 (팝업 차단 우회)
-            const link = document.createElement('a');
-            link.href = finalUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }, index * 1000); // 1초 간격으로 열기
-        });
-        
-        alert(`${selectedBills.length}개의 창이 열립니다.\n각 창에서 북마클릿을 다시 클릭하여 자동 입력하세요!`);
+            // 나머지 탭 열기 버튼 이벤트
+            document.getElementById('openRemainingTabs').onclick = () => {
+              for (let i = 1; i < selectedBills.length; i++) {
+                const bill = selectedBills[i];
+                const url = new URL(bill.link);
+                url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
+                url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+                
+                setTimeout(() => {
+                  window.open(url.toString(), '_blank');
+                  console.log(`${i + 1}번째 법안 열기:`, bill.title);
+                }, i * 200); // 0.2초 간격
+              }
+              
+              openAllButton.remove();
+              alert(`총 ${selectedBills.length}개 탭이 열렸습니다.\n각 탭에서 북마클릿을 클릭하여 자동 입력하세요!`);
+            };
+          } else {
+            alert('1개 탭이 열렸습니다.\n북마클릿을 클릭하여 자동 입력하세요!');
+          }
+        }
       };
 
       // 취소 버튼
@@ -373,16 +436,28 @@ javascript:(function() {
           captchaField.addEventListener('input', function() {
             const value = this.value;
             if (/^\d+$/.test(value) && value.length === 5) {
-              console.log('🚀 캡차 완료, 자동 제출');
+              console.log('🚀 캡차 완료, 자동 제출 시작');
               setTimeout(() => {
                 try {
                   trimAllInputText();
                   if (!validate()) return;
                   $('.loading_bar').show();
                   checkWebFilter($('#frm'));
+                  
+                  // 제출 후 창 닫기 (확인창 우회)
+                  setTimeout(() => {
+                    console.log('🚪 창 닫기 시도');
+                    window.close();
+                  }, 2000);
+                  
                 } catch (e) {
                   console.warn('자동 제출 실패, 수동 버튼 클릭');
                   document.getElementById('btn_opnReg').click();
+                  
+                  // 수동 클릭 후에도 창 닫기
+                  setTimeout(() => {
+                    window.close();
+                  }, 2000);
                 }
               }, 500);
             }
@@ -416,7 +491,7 @@ javascript:(function() {
           <div style="margin-top: 5px;"><strong>내용:</strong> ${autoContent.substring(0, 30)}...</div>
         </div>
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-          ⚡ <strong>캡차 5자리를 입력하면 자동으로 제출됩니다!</strong>
+          ⚡ <strong>캡차 5자리를 입력하면 자동 제출 후 창이 닫힙니다!</strong>
         </div>
         <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
       `;
