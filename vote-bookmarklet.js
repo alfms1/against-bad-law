@@ -291,10 +291,10 @@ javascript:(function() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-          }, index * 500); // 0.5초 간격으로 열기
+          }, index * 1000); // 1초 간격으로 열기
         });
         
-        alert(`${selectedBills.length}개의 탭이 열립니다.\n각 탭에서 북마클릿을 클릭하여 자동 입력하세요!`);
+        alert(`${selectedBills.length}개의 창이 열립니다.\n각 창에서 북마클릿을 다시 클릭하여 자동 입력하세요!`);
       };
 
       // 취소 버튼
@@ -373,28 +373,16 @@ javascript:(function() {
           captchaField.addEventListener('input', function() {
             const value = this.value;
             if (/^\d+$/.test(value) && value.length === 5) {
-              console.log('🚀 캡차 완료, 자동 제출 시작');
+              console.log('🚀 캡차 완료, 자동 제출');
               setTimeout(() => {
                 try {
                   trimAllInputText();
                   if (!validate()) return;
                   $('.loading_bar').show();
                   checkWebFilter($('#frm'));
-                  
-                  // 제출 후 창 닫기 (확인창 우회)
-                  setTimeout(() => {
-                    console.log('🚪 창 닫기 시도');
-                    window.close();
-                  }, 2000);
-                  
                 } catch (e) {
                   console.warn('자동 제출 실패, 수동 버튼 클릭');
                   document.getElementById('btn_opnReg').click();
-                  
-                  // 수동 클릭 후에도 창 닫기
-                  setTimeout(() => {
-                    window.close();
-                  }, 2000);
                 }
               }, 500);
             }
@@ -428,7 +416,7 @@ javascript:(function() {
           <div style="margin-top: 5px;"><strong>내용:</strong> ${autoContent.substring(0, 30)}...</div>
         </div>
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-          ⚡ <strong>캡차 5자리를 입력하면 자동 제출 후 창이 닫힙니다!</strong>
+          ⚡ <strong>캡차 5자리를 입력하면 자동으로 제출됩니다!</strong>
         </div>
         <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
       `;
