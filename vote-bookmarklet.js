@@ -1,24 +1,24 @@
 // 캡차 에러 전용 알림
 function showCaptchaErrorNotification(errorMsg) {
   const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #f44336, #d32f2f);
-    color: white;
-    padding: 25px;
-    border-radius: 15px;
-    z-index: 999999;
-    font-family: Arial, sans-serif;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    font-size: 16px;
-    max-width: 400px;
-    border: 3px solid #fff;
-    text-align: center;
-    animation: shake 0.5s ease-in-out;
-  `;
+  Object.assign(notification.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: 'linear-gradient(135deg, #f44336, #d32f2f)',
+    color: 'white',
+    padding: '25px',
+    borderRadius: '15px',
+    zIndex: '999999',
+    fontFamily: 'Arial, sans-serif',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
+    fontSize: '16px',
+    maxWidth: '400px',
+    border: '3px solid #fff',
+    textAlign: 'center',
+    animation: 'shake 0.5s ease-in-out'
+  });
   
   // CSS 애니메이션 추가
   if (!document.querySelector('#captcha-error-style')) {
@@ -62,11 +62,11 @@ function showCaptchaErrorNotification(errorMsg) {
   }, 7000);
 }javascript:(function() {
 const currentDomain = window.location.hostname;
-console.log('🎯 범용 북마클릿 실행 - 도메인:', currentDomain);
+// console.log('🎯 범용 북마클릿 실행 - 도메인:', currentDomain);
 
 // VForKorea 사이트에서의 동작
 if (currentDomain === 'vforkorea.com') {
-console.log('📍 VForKorea 사이트 감지 - 의견 등록 시스템 실행');
+// console.log('📍 VForKorea 사이트 감지 - 의견 등록 시스템 실행');
 
 // 기존 패널 제거
 const existingPanel = document.querySelector('#vote-control-panel');
@@ -76,13 +76,13 @@ if (existingPanel) existingPanel.remove();
 const todayRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
 const redSpan = tr.querySelector('td span.red');
 const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
-if (isToday) {
-console.log('오늘 마감 법안 발견:', tr.querySelector('.content .t')?.textContent);
-}
+// if (isToday) {
+// console.log('오늘 마감 법안 발견:', tr.querySelector('.content .t')?.textContent);
+// }
 return isToday;
 });
 
-console.log(`총 ${todayRows.length}개의 오늘 마감 법안을 찾았습니다.`);
+// console.log(`총 ${todayRows.length}개의 오늘 마감 법안을 찾았습니다.`);
 
 if (!todayRows.length) {
 alert('오늘 마감된 법안이 없습니다.');
@@ -127,70 +127,12 @@ controlPanel.appendChild(header);
 const billsList = document.createElement('div');
 const bills = [];
 
-// --- postMessage 수신: 의견 등록 성공 시 체크표시/비활성화 ---
-window.addEventListener('message', function(event) {
-  console.log('[패널] postMessage 수신:', event);
-  if (!event.data || event.data.type !== 'voteSuccess') {
-    console.log('[패널] 메시지 타입 불일치 또는 데이터 없음:', event.data);
-    return;
-  }
-  const { billId, voteType } = event.data;
-  console.log('[패널] 수신 billId:', billId, 'voteType:', voteType);
-  if (!billId || !voteType) {
-    console.log('[패널] billId 또는 voteType 없음');
-    return;
-  }
-  try {
-    localStorage.setItem('vforkorea_voted_' + billId, voteType);
-    console.log('[패널] LocalStorage 기록 완료:', 'vforkorea_voted_' + billId, voteType);
-  } catch (e) {
-    console.error('[패널] LocalStorage 기록 에러:', e);
-  }
-  // 패널 UI 갱신
-  const billIdx = bills.findIndex(b => b.billId == billId);
-  if (billIdx !== -1) {
-    const bill = bills[billIdx];
-    const statusSpan = bill.element.querySelector('span.vote-status');
-    statusSpan.textContent = (voteType === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료');
-    statusSpan.style.color = '#888';
-    // 버튼 비활성화
-    const buttons = bill.element.querySelectorAll('.vote-btn');
-    buttons.forEach(btn => btn.disabled = true);
-    bill.vote = voteType; // 내부 상태도 갱신
-    console.log('[패널] UI 갱신 완료:', billId, voteType);
-  } else {
-    console.log('[패널] bills 배열에서 billId 못 찾음:', billId);
-  }
-});
-
-// --- LocalStorage polling: 2초마다 상태 확인 ---
-setInterval(() => {
-  bills.forEach((bill, idx) => {
-    try {
-      const voted = localStorage.getItem('vforkorea_voted_' + bill.billId);
-      const statusSpan = bill.element.querySelector('span.vote-status');
-      const buttons = bill.element.querySelectorAll('.vote-btn');
-      if (voted) {
-        statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
-        statusSpan.style.color = '#888';
-        buttons.forEach(btn => btn.disabled = true);
-        bill.vote = voted;
-        // polling 로그
-        console.log('[패널] polling: 완료 감지', bill.billId, voted);
-      }
-    } catch (e) {
-      console.error('[패널] polling LocalStorage 에러:', e);
-    }
-  });
-}, 2000);
-
 todayRows.forEach((tr, index) => {
 const titleElement = tr.querySelector('.content .t');
 const voteLink = tr.querySelector('a[href*="forInsert.do"]');
-const billId = tr.getAttribute('data-idx');
 
-if (!titleElement || !voteLink || !billId) {
-console.warn('필요한 요소를 찾을 수 없습니다:', tr);
+if (!titleElement || !voteLink) {
+// console.warn('필요한 요소를 찾을 수 없습니다:', tr);
 return;
 }
 
@@ -198,43 +140,67 @@ const title = titleElement.textContent.trim();
 const shortTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
 
 const billItem = document.createElement('div');
-billItem.style.cssText = `
-margin-bottom: 12px;
-padding: 10px;
-border: 1px solid #ddd;
-border-radius: 6px;
-background: #f9f9f9;
-`;
+Object.assign(billItem.style, {
+  marginBottom: '12px',
+  padding: '10px',
+  border: '1px solid #ddd',
+  borderRadius: '6px',
+  background: '#f9f9f9'
+});
 
 billItem.innerHTML = `
-<div style="font-weight: bold; margin-bottom: 8px; font-size: 13px; line-height: 1.3;">
+<div style="
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+">
 ${shortTitle}
 </div>
-<div style="display: flex; gap: 8px; align-items: center;">
-<button class="vote-btn agree" data-index="${index}" style="padding: 4px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">찬성</button>
-<button class="vote-btn disagree" data-index="${index}" style="padding: 4px 12px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">반대</button>
-<span class="vote-status" data-index="${index}" style="margin-left: 8px; font-weight: bold; font-size: 12px;">미선택</span>
+<div style="
+  display: flex;
+  gap: 8px;
+  align-items: center;
+">
+<button class="vote-btn agree" data-index="${index}" style="
+  padding: 4px 12px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+">
+찬성
+</button>
+<button class="vote-btn disagree" data-index="${index}" style="
+  padding: 4px 12px;
+  background: #c62828;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+">
+반대
+</button>
+<span class="vote-status" data-index="${index}" style="
+  margin-left: 8px;
+  font-weight: bold;
+  font-size: 12px;
+">
+미선택
+</span>
 </div>
 `;
 
 billsList.appendChild(billItem);
 
-// --- 이미 완료된 투표 체크 ---
-const voted = localStorage.getItem('vforkorea_voted_' + billId);
-if (voted) {
-  const statusSpan = billItem.querySelector('span.vote-status');
-  statusSpan.textContent = voted === 'agree' ? '✅ 찬성 완료' : '✅ 반대 완료';
-  statusSpan.style.color = '#888';
-  const buttons = billItem.querySelectorAll('.vote-btn');
-  buttons.forEach(btn => btn.disabled = true);
-}
-
 bills.push({
 title: title,
 link: voteLink.href,
 vote: null,
-element: billItem,
-billId: billId
+element: billItem
 });
 });
 
@@ -243,10 +209,43 @@ controlPanel.appendChild(billsList);
 // 5. 실행 버튼들
 const actionButtons = document.createElement('div');
 actionButtons.innerHTML = `
-<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-<button id="start-opinion-registration" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🚀 의견 등록 시작</button>
-<button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
-<div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
+<div style="
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+">
+<button id="start-opinion-registration" style="
+  width: 100%;
+  padding: 12px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 8px;
+">
+🚀 의견 등록 시작
+</button>
+<button id="close-panel" style="
+  width: 100%;
+  padding: 8px;
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+">
+패널 닫기
+</button>
+<div style="
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+">
 ✨ 캡차 5자리 입력시 성공하면 자동으로 탭이 닫힙니다!
 </div>
 </div>
@@ -317,12 +316,6 @@ bill.vote = null;
 const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
 statusSpan.textContent = '미선택';
 statusSpan.style.color = '#666';
-
-const billDiv = bill.element;
-const buttons = billDiv.querySelectorAll('.vote-btn');
-buttons.forEach(btn => {
-btn.style.opacity = '1';
-});
 });
 };
 
@@ -353,58 +346,128 @@ const defaultContent = isMainlyAgree ?
 
 // 입력 모달 생성
 const modalOverlay = document.createElement('div');
-modalOverlay.style.cssText = `
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background: rgba(0,0,0,0.7);
-z-index: 20000;
-display: flex;
-justify-content: center;
-align-items: center;
-`;
+Object.assign(modalOverlay.style, {
+  position: 'fixed',
+  top: '0',
+  left: '0',
+  width: '100%',
+  height: '100%',
+  background: 'rgba(0,0,0,0.7)',
+  zIndex: '20000',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+});
 
 const modal = document.createElement('div');
-modal.style.cssText = `
-background: white;
-padding: ${isMobile ? '20px' : '30px'};
-border-radius: 12px;
-box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-max-width: ${isMobile ? '95%' : '500px'};
-width: 90%;
-font-family: Arial, sans-serif;
-max-height: 80vh;
-overflow-y: auto;
-`;
+Object.assign(modal.style, {
+  background: 'white',
+  padding: `${isMobile ? '20px' : '30px'}`,
+  borderRadius: '12px',
+  boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+  maxWidth: `${isMobile ? '95%' : '500px'}`,
+  width: '90%',
+  fontFamily: 'Arial, sans-serif',
+  maxHeight: '80vh',
+  overflowY: 'auto'
+});
 
 modal.innerHTML = `
-<h3 style="margin: 0 0 20px 0; color: #333; text-align: center;">📝 의견 입력</h3>
+<h3 style="
+  margin: 0 0 20px 0;
+  color: #333;
+  text-align: center;
+">
+📝 의견 입력
+</h3>
 ${agreeBills.length > 0 && disagreeBills.length > 0 ? 
-`<div style="background: #e3f2fd; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+`<div style="
+  background: #e3f2fd;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+">
   ℹ️ 찬성 ${agreeBills.length}개, 반대 ${disagreeBills.length}개 법안이 선택되었습니다.
 </div>` : ''
 }
 <div style="margin-bottom: 15px;">
-<label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">제목:</label>
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+제목:
+</label>
 <input type="text" id="modal-title" placeholder="예: 이 법안을 반대합니다" 
-       style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;"
+       style="
+         width: 100%;
+         padding: 10px;
+         border: 2px solid #ddd;
+         border-radius: 6px;
+         font-size: 14px;
+       "
        value="${defaultTitle}">
 </div>
 <div style="margin-bottom: 20px;">
-<label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">내용:</label>
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+내용:
+</label>
 <textarea id="modal-content" placeholder="예: 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다"
-          style="width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical;">${defaultContent}</textarea>
+          style="
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+          ">${defaultContent}</textarea>
 </div>
-<div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid #ff9800;">
+<div style="
+  background: #fff3e0;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  border-left: 4px solid #ff9800;
+">
 <strong>✨ 스마트 캡차 처리:</strong><br>
 • 캡차 5자리 입력 후 성공하면 → 탭 자동 닫기<br>
 • 실패하면 → 탭 유지하여 다시 입력 가능
 </div>
 <div style="text-align: center;">
-<button id="modal-ok" style="background: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 6px; margin-right: 10px; cursor: pointer; font-size: 14px; font-weight: bold;">확인 (${selectedBills.length}개 법안)</button>
-<button id="modal-cancel" style="background: #f44336; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">취소</button>
+<button id="modal-ok" style="
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+">
+확인 (${selectedBills.length}개 법안)
+</button>
+<button id="modal-cancel" style="
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+">
+취소
+</button>
 </div>
 `;
 
@@ -498,12 +561,12 @@ document.getElementById('modal-ok').onclick = () => {
 document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
 };
 
-console.log('✅ VForKorea 의견 등록 시스템 준비 완료');
+// console.log('✅ VForKorea 의견 등록 시스템 준비 완료');
 }
 
 // 국회 의견 등록 사이트에서의 동작 (스마트 캡차 처리 포함)
 else if (currentDomain === 'pal.assembly.go.kr') {
-console.log('📍 국회 의견 등록 사이트 감지 - 스마트 자동 입력 실행');
+// console.log('📍 국회 의견 등록 사이트 감지 - 스마트 자동 입력 실행');
 
 // LocalStorage에서 데이터 읽기
 const storedData = localStorage.getItem('autoFillData');
@@ -517,31 +580,31 @@ let autoContent = '';
 const urlParams = new URLSearchParams(location.search);
 const voteType = urlParams.get('voteType');
 
-console.log('🔍 감지된 투표 타입:', voteType);
+// console.log('🔍 감지된 투표 타입:', voteType);
 
 // voteType에 따라 적절한 데이터 로드
 if (voteType === 'agree' && storedAgreeData) {
 const data = JSON.parse(storedAgreeData);
 autoTitle = data.title || '';
 autoContent = data.content || '';
-console.log('📦 찬성 데이터 로드:', { autoTitle, autoContent });
+// console.log('📦 찬성 데이터 로드:', { autoTitle, autoContent });
 } else if (voteType === 'disagree' && storedDisagreeData) {
 const data = JSON.parse(storedDisagreeData);
 autoTitle = data.title || '';
 autoContent = data.content || '';
-console.log('📦 반대 데이터 로드:', { autoTitle, autoContent });
+// console.log('📦 반대 데이터 로드:', { autoTitle, autoContent });
 } else if (storedData) {
 const data = JSON.parse(storedData);
 autoTitle = data.title || '';
 autoContent = data.content || '';
-console.log('📦 기존 데이터 로드:', { autoTitle, autoContent });
+// console.log('📦 기존 데이터 로드:', { autoTitle, autoContent });
 }
 
 // URL 파라미터에서도 읽기 (최종 백업)
 if (!autoTitle || !autoContent) {
 autoTitle = autoTitle || decodeURIComponent(urlParams.get('autoTitle') || '');
 autoContent = autoContent || decodeURIComponent(urlParams.get('autoContent') || '');
-console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
+// console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
 }
 
 if (!autoTitle && !autoContent) {
@@ -555,24 +618,24 @@ const titleField = document.querySelector('#txt_sj');
 const contentField = document.querySelector('#txt_cn');
 const captchaField = document.querySelector('#catpchaAnswer');
 
-console.log('📋 필드 확인:', {
-titleField: !!titleField,
-contentField: !!contentField,
-captchaField: !!captchaField
-});
+// console.log('📋 필드 확인:', {
+// titleField: !!titleField,
+// contentField: !!contentField,
+// captchaField: !!captchaField
+// });
 
 if (titleField && autoTitle) {
 titleField.value = autoTitle;
 titleField.dispatchEvent(new Event('input', { bubbles: true }));
 titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
-console.log('✅ 제목 입력 완료');
+// console.log('✅ 제목 입력 완료');
 }
 
 if (contentField && autoContent) {
 contentField.value = autoContent;
 contentField.dispatchEvent(new Event('input', { bubbles: true }));
 contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
-console.log('✅ 내용 입력 완료');
+// console.log('✅ 내용 입력 완료');
 }
 
 if (captchaField) {
@@ -589,12 +652,12 @@ let isSubmitting = false; // 중복 제출 방지
 
 captchaField.addEventListener('input', function() {
   const value = this.value.trim();
-  console.log('🔤 캡차 입력 중:', value);
+  // console.log('🔤 캡차 입력 중:', value);
   
   // 5자리 숫자 입력 완료시
   if (/^\d{5}$/.test(value) && !isSubmitting) {
     isSubmitting = true;
-    console.log('🎯 캡차 5자리 완료, 제출 시도:', value);
+    // console.log('🎯 캡차 5자리 완료, 제출 시도:', value);
     
     // 시각적 피드백
     this.style.background = '#e8f5e8';
@@ -608,7 +671,7 @@ captchaField.addEventListener('input', function() {
         }
         
         if (typeof validate === 'function' && !validate()) {
-          console.log('❌ 유효성 검사 실패');
+          // console.log('❌ 유효성 검사 실패');
           isSubmitting = false;
           captchaField.style.background = '#ffebee';
           captchaField.style.borderColor = '#f44336';
@@ -623,7 +686,7 @@ captchaField.addEventListener('input', function() {
         // 제출 시도
         if (typeof checkWebFilter === 'function' && typeof $ !== 'undefined') {
           checkWebFilter($('#frm'));
-          console.log('📤 폼 제출 완료 - 결과 대기 중...');
+          // console.log('📤 폼 제출 완료 - 결과 대기 중...');
           
           // 제출 후 결과 확인 (3초 대기)
           setTimeout(() => {
@@ -635,7 +698,7 @@ captchaField.addEventListener('input', function() {
           const submitBtn = document.getElementById('btn_opnReg');
           if (submitBtn) {
             submitBtn.click();
-            console.log('🖱️ 수동 버튼 클릭으로 제출');
+            // console.log('🖱️ 수동 버튼 클릭으로 제출');
             
             setTimeout(() => {
               checkSubmissionResult();
@@ -644,7 +707,7 @@ captchaField.addEventListener('input', function() {
         }
         
       } catch (e) {
-        console.error('❌ 제출 중 오류:', e);
+        // console.error('❌ 제출 중 오류:', e);
         isSubmitting = false;
         captchaField.style.background = '#ffebee';
         captchaField.style.borderColor = '#f44336';
@@ -655,7 +718,7 @@ captchaField.addEventListener('input', function() {
 
 // 제출 결과 확인 함수
 function checkSubmissionResult() {
-  console.log('🔍 제출 결과 확인 시작...');
+  // console.log('🔍 제출 결과 확인 시작...');
   
   // 1단계: 정확한 에러 메시지 확인 (최우선)
   let errorMessage = null;
@@ -671,7 +734,7 @@ function checkSubmissionResult() {
         text.includes('방지 문자가 일치하지') ||
         text.includes('일치하지 않습니다')) {
       errorMessage = text;
-      console.log('🚫 정확한 캡차 에러 감지:', text);
+      // console.log('🚫 정확한 캡차 에러 감지:', text);
       break;
     }
     
@@ -688,7 +751,7 @@ function checkSubmissionResult() {
     
     if (hasError && text.length > 5 && text.length < 100) {
       errorMessage = text;
-      console.log('🚫 캡차 관련 에러 감지:', text);
+      // console.log('🚫 캡차 관련 에러 감지:', text);
       break;
     }
   }
@@ -701,7 +764,7 @@ function checkSubmissionResult() {
     
     window.alert = function(msg) {
       capturedAlert = msg;
-      console.log('🚨 Alert 메시지 캡처:', msg);
+      // console.log('🚨 Alert 메시지 캡처:', msg);
       return originalAlert.call(this, msg);
     };
     
@@ -721,7 +784,7 @@ function checkSubmissionResult() {
     const currentUrl = window.location.href;
     if (currentUrl.includes('complete') || currentUrl.includes('success')) {
       successMessage = 'URL 변경으로 성공 감지';
-      console.log('✅ URL 성공 감지:', currentUrl);
+      // console.log('✅ URL 성공 감지:', currentUrl);
     }
     
     // 성공 메시지 확인
@@ -735,23 +798,23 @@ function checkSubmissionResult() {
             !text.includes('중복 방지') && !text.includes('일치하지') && 
             !text.includes('틀렸') && text.length < 100) {
           successMessage = text;
-          console.log('✅ 성공 메시지 발견:', text);
+          // console.log('✅ 성공 메시지 발견:', text);
           break;
         }
       }
     }
   }
   
-  console.log('📊 최종 판정:', {
-    errorMessage,
-    successMessage,
-    url: window.location.href
-  });
+  // console.log('📊 최종 판정:', {
+  //   errorMessage,
+  //   successMessage,
+  //   url: window.location.href
+  // });
   
   // 4단계: 최종 결정 (에러 메시지가 있으면 무조건 실패!)
   if (errorMessage) {
     // ❌ "중복 방지 문자가 일치하지 않습니다" 감지 - 탭 유지!
-    console.log('❌ 캡차 오류 확정! 탭 유지하고 재입력 대기');
+    // console.log('❌ 캡차 오류 확정! 탭 유지하고 재입력 대기');
     isSubmitting = false;
     
     // 캡차 필드 초기화
@@ -772,23 +835,23 @@ function checkSubmissionResult() {
     
   } else if (successMessage) {
     // 🎉 에러 없고 성공 메시지만 있으면 탭 닫기!
-    console.log('🎉 진짜 성공! 탭을 닫습니다...');
+    // console.log('🎉 진짜 성공! 탭을 닫습니다...');
     
     showSuccessNotification();
     
     setTimeout(() => {
       try {
         window.close();
-        console.log('🚪 탭 닫기 성공');
+        // console.log('🚪 탭 닫기 성공');
       } catch (e) {
-        console.log('🚪 탭 닫기 실패, about:blank로 이동');
+        // console.log('🚪 탭 닫기 실패, about:blank로 이동');
         window.location.href = 'about:blank';
       }
     }, 1500);
     
   } else {
     // 🤔 아직 결과가 불분명하면 조금 더 기다리기
-    console.log('🤔 결과 대기 중... 3초 후 재확인');
+    // console.log('🤔 결과 대기 중... 3초 후 재확인');
     setTimeout(() => {
       checkSubmissionResult();
     }, 3000);
@@ -798,22 +861,22 @@ function checkSubmissionResult() {
 // 성공 알림 함수
 function showSuccessNotification() {
   const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-    color: white;
-    padding: 20px 30px;
-    border-radius: 12px;
-    z-index: 999999;
-    font-family: Arial, sans-serif;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    text-align: center;
-    font-size: 16px;
-    font-weight: bold;
-  `;
+  Object.assign(notification.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+    color: 'white',
+    padding: '20px 30px',
+    borderRadius: '12px',
+    zIndex: '999999',
+    fontFamily: 'Arial, sans-serif',
+    boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+    textAlign: 'center',
+    fontSize: '16px',
+    fontWeight: 'bold'
+  });
   
   notification.innerHTML = `
     <div style="font-size: 24px; margin-bottom: 10px;">🎉</div>
@@ -822,41 +885,25 @@ function showSuccessNotification() {
   `;
   
   document.body.appendChild(notification);
-
-  // --- postMessage로 opener(원래 창)에 성공 알림 전송 ---
-  try {
-    const urlParams = new URLSearchParams(location.search);
-    const billId = urlParams.get('billId');
-    const voteType = urlParams.get('voteType');
-    console.log('[국회창] postMessage 시도:', { billId, voteType, opener: !!window.opener });
-    if (window.opener && billId && voteType) {
-      window.opener.postMessage({ type: 'voteSuccess', billId, voteType }, '*');
-      console.log('[국회창] opener에 voteSuccess 메시지 전송:', { billId, voteType });
-    } else {
-      console.log('[국회창] postMessage 조건 불충족:', { billId, voteType, opener: !!window.opener });
-    }
-  } catch (e) {
-    console.warn('[국회창] opener postMessage 실패:', e);
-  }
 }
 
 // 알 수 없는 Alert 메시지 알림
 function showUnknownAlertNotification(alertMessage) {
 const notification = document.createElement('div');
-notification.style.cssText = `
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: linear-gradient(135deg, #ff9800, #f57c00);
-  color: white;
-  padding: 15px 20px;
-  border-radius: 8px;
-  z-index: 999999;
-  font-family: Arial, sans-serif;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  font-size: 14px;
-  max-width: 350px;
-`;
+Object.assign(notification.style, {
+  position: 'fixed',
+  top: '20px',
+  right: '20px',
+  background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+  color: 'white',
+  padding: '15px 20px',
+  borderRadius: '8px',
+  zIndex: '999999',
+  fontFamily: 'Arial, sans-serif',
+  boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+  fontSize: '14px',
+  maxWidth: '350px'
+});
 
 notification.innerHTML = `
   <div style="font-weight: bold; margin-bottom: 8px;">⚠️ 알 수 없는 메시지</div>
@@ -906,19 +953,19 @@ if (currentDomain === 'pal.assembly.go.kr') {
 
 // 초기 성공 알림
 const notification = document.createElement('div');
-notification.style.cssText = `
-position: fixed;
-top: 20px;
-right: 20px;
-background: linear-gradient(135deg, #4CAF50, #45a049);
-color: white;
-padding: 20px;
-border-radius: 12px;
-z-index: 10000;
-font-family: Arial, sans-serif;
-box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-max-width: 300px;
-`;
+Object.assign(notification.style, {
+position: 'fixed',
+top: '20px',
+right: '20px',
+background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+color: 'white',
+padding: '20px',
+borderRadius: '12px',
+zIndex: '10000',
+fontFamily: 'Arial, sans-serif',
+boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+maxWidth: '300px'
+});
 
 notification.innerHTML = `
 <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
@@ -947,12 +994,12 @@ window.addEventListener('load', executeAutoFill);
 setTimeout(executeAutoFill, 2000);
 }
 
-console.log('✅ 국회 사이트 스마트 자동 입력 준비 완료');
+// console.log('✅ 국회 사이트 스마트 자동 입력 준비 완료');
 }
 
 // 기타 사이트
 else {
-console.log('❓ 지원하지 않는 사이트:', currentDomain);
+// console.log('❓ 지원하지 않는 사이트:', currentDomain);
 alert('이 북마클릿은 VForKorea와 국회 의견 등록 사이트에서만 작동합니다.');
 }
 })();
