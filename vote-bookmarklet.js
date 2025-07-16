@@ -1,6 +1,6 @@
 (() => {
-  const links = [...document.querySelectorAll('a')]
-    .filter(a => a.textContent.includes('오늘 마감'));
+  const todaySpans = [...document.querySelectorAll('span.red')]
+    .filter(span => span.textContent.includes('오늘 마감'));
 
   if (!links.length) return alert('오늘 마감된 법안이 없습니다.');
 
