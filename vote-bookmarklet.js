@@ -311,18 +311,26 @@ btn.style.opacity = btn.classList.contains('disagree') ? '1' : '0.5';
 };
 
 document.getElementById('clear-all').onclick = () => {
-bills.forEach((bill, index) => {
-bill.vote = null;
-const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
-statusSpan.textContent = '미선택';
-statusSpan.style.color = '#666';
+  bills.forEach((bill, index) => {
+    bill.vote = null;
+    const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
+    statusSpan.textContent = '미선택';
+    statusSpan.style.color = '#666';
 
-const billDiv = bill.element;
-const buttons = billDiv.querySelectorAll('.vote-btn');
-buttons.forEach(btn => {
-btn.style.opacity = '1'; // 모든 버튼의 불투명도를 1로 재설정
-});
-});
+    const billDiv = bill.element;
+    const buttons = billDiv.querySelectorAll('.vote-btn');
+    buttons.forEach(btn => {
+      btn.style.opacity = '1'; // 모든 버튼의 불투명도를 1로 재설정
+      // 버튼 스타일 원상복구
+      if (btn.classList.contains('agree')) {
+        btn.style.background = '#2e7d32';
+        btn.style.color = 'white';
+      } else if (btn.classList.contains('disagree')) {
+        btn.style.background = '#c62828';
+        btn.style.color = 'white';
+      }
+    });
+  });
 };
 
 // 패널 닫기
