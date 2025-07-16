@@ -1,5 +1,11 @@
 (() => {
-  console.log('스크립트 시작...');
+  console.log('Vote Bookmarklet 시작...');
+  
+  // VFOR Korea 사이트에서만 실행
+  if (!location.hostname.includes('vforkorea.com')) {
+    alert('이 스크립트는 vforkorea.com에서만 작동합니다.');
+    return;
+  }
   
   // 1. 오늘 마감된 행들을 더 정확하게 찾기
   const todayRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
@@ -17,6 +23,10 @@
     alert('오늘 마감된 법안이 없습니다.');
     return;
   }
+
+  // 기존 패널이 있으면 제거
+  const existing = document.querySelector('#vote-control-panel');
+  if (existing) existing.remove();
 
   // 2. 컨트롤 패널 생성
   const controlPanel = document.createElement('div');
@@ -188,7 +198,7 @@
     controlPanel.remove();
   };
 
-  // 7. 의견 등록 실행 (여기가 핵심 수정 부분!)
+  // 7. 의견 등록 실행
   document.getElementById('start-voting').onclick = () => {
     const selectedBills = bills.filter(bill => bill.vote !== null);
     
@@ -246,111 +256,20 @@
       
       const win = window.open(fullUrl, `vote_${currentIndex}`, 'width=1200,height=800');
       
-      // 🔥 새 창에 자동 입력 스크립트 주입 (핵심 추가 부분!)
+      // 새 창에 Bad-Law.js 스크립트 로드
       setTimeout(() => {
         try {
           if (win && !win.closed && win.document) {
-            console.log('새 창에 자동 입력 스크립트 주입 중...');
+            console.log('새 창에 Bad-Law.js 로드 중...');
             
             const script = win.document.createElement('script');
-            script.textContent = `
-              (() => {
-                console.log('자동 입력 스크립트 실행됨');
-                
-                const opinionParam = new URLSearchParams(location.search).get("opinion");
-                const agree = opinionParam === "Y";
-                const isValid = opinionParam === "Y" || opinionParam === "N";
-                
-                console.log('opinion 파라미터:', opinionParam, '찬성여부:', agree);
-                
-                if (!isValid) {
-                  console.log('유효하지 않은 opinion 파라미터');
-                  return;
-                }
-
-                function fillForm() {
-                  console.log('폼 입력 시작...');
-                  
-                  const sj = document.querySelector('#txt_sj');
-                  const cn = document.querySelector('#txt_cn');
-                  const captcha = document.querySelector('#catpchaAnswer');
-                  
-                  if (sj) {
-                    sj.value = agree ? '찬성합니다' : '반대합니다';
-                    console.log('제목 입력:', sj.value);
-                  } else {
-                    console.log('제목 입력란(#txt_sj)을 찾을 수 없음');
-                  }
-                  
-                  if (cn) {
-                    cn.value = agree ? '이 법률안을 찬성합니다.' : '이 법률안을 반대합니다.';
-                    console.log('내용 입력:', cn.value);
-                  } else {
-                    console.log('내용 입력란(#txt_cn)을 찾을 수 없음');
-                  }
-                  
-                  if (captcha) {
-                    captcha.focus();
-                    console.log('캡차 입력란에 포커스');
-                  } else {
-                    console.log('캡차 입력란(#catpchaAnswer)을 찾을 수 없음');
-                  }
-                  
-                  // 상태 표시 박스 생성
-                  const statusBox = document.createElement('div');
-                  statusBox.style.cssText = \`
-                    position: fixed;
-                    top: 20px;
-                    left: 20px;
-                    background: \${agree ? '#4caf50' : '#f44336'};
-                    color: white;
-                    padding: 15px;
-                    border-radius: 8px;
-                    z-index: 9999;
-                    font-weight: bold;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                  \`;
-                  statusBox.innerHTML = \`
-                    <div>\${agree ? '✅ 찬성 의견' : '❌ 반대 의견'} 자동 입력됨</div>
-                    <div style="font-size: 12px; margin-top: 5px;">캡차를 입력하고 등록하세요</div>
-                    <button onclick="this.parentElement.remove()" style="margin-top: 8px; padding: 4px 8px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
-                  \`;
-                  document.body.appendChild(statusBox);
-                }
-
-                // 페이지 로딩 대기
-                let attempts = 0;
-                const waitForElements = () => {
-                  attempts++;
-                  const sj = document.querySelector('#txt_sj');
-                  const cn = document.querySelector('#txt_cn');
-                  
-                  console.log(\`시도 \${attempts}: 제목 입력란 \${sj ? '발견' : '없음'}, 내용 입력란 \${cn ? '발견' : '없음'}\`);
-                  
-                  if (sj && cn) {
-                    fillForm();
-                  } else if (attempts < 20) {
-                    setTimeout(waitForElements, 500);
-                  } else {
-                    console.log('입력란을 찾을 수 없습니다. 수동으로 입력해주세요.');
-                  }
-                };
-
-                if (document.readyState === 'loading') {
-                  document.addEventListener('DOMContentLoaded', waitForElements);
-                } else {
-                  waitForElements();
-                }
-              })();
-            `;
-            
+            script.src = 'https://alfms1.github.io/against-bad-law/Bad-Law.js';
+            script.onload = () => console.log('Bad-Law.js 로드 완료');
+            script.onerror = () => console.log('Bad-Law.js 로드 실패');
             win.document.head.appendChild(script);
-            console.log('스크립트 주입 완료');
-          } else {
-            console.log('새 창 접근 실패 - CORS 제한일 수 있음');
           }
         } catch (e) {
-          console.log('스크립트 주입 실패:', e.message);
+          console.log('스크립트 로드 실패 (CORS):', e.message);
         }
       }, 2000);
       
@@ -358,7 +277,7 @@
         if (win.closed) {
           clearInterval(checkClosed);
           currentIndex++;
-          setTimeout(openNext, 1000); // 1초 대기 후 다음 진행
+          setTimeout(openNext, 1000);
         }
       }, 500);
     };
