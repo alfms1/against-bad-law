@@ -109,7 +109,7 @@
       <button id="start-opinion-registration" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">🚀 의견 등록 시작</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
-        크로스 오리진 문제 해결! 사용자 친화적인 방식으로 변경.
+        🎯 최고로 간단! 새 창에서 버튼만 클릭하면 끝!
       </div>
     </div>
   `;
@@ -448,12 +448,13 @@
         <h4>📝 의견 등록 진행 중...</h4>
         <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
         <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
-        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
-          🎯 <strong>간단한 3단계 방식!</strong><br>
-          1️⃣ 새 창이 열리고 안내 팝업이 나타남<br>
-          2️⃣ 새 창에서: <strong>주소창 클릭</strong> → <strong>Ctrl+V</strong> → <strong>Enter</strong><br>
-          3️⃣ 자동 입력 후 <strong>캡차 5자리만 입력</strong>하면 자동 제출!<br>
-          💡 스크립트가 자동으로 클립보드에 복사됩니다.
+        <div style="background: #e8f5e8; border: 1px solid #4CAF50; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
+          🎯 <strong>버튼 방식으로 변경!</strong><br>
+          1️⃣ 새 창이 열리고 <strong>2초 후 큰 버튼</strong>이 나타남<br>
+          2️⃣ <strong>"🚀 자동 입력 시작"</strong> 버튼 클릭<br>
+          3️⃣ 자동 입력 완료 → <strong>캡차 5자리만 입력</strong><br>
+          4️⃣ 자동 제출 완료!<br>
+          💡 이제 Ctrl+V 없이 버튼만 클릭하면 됩니다!
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
@@ -489,99 +490,191 @@
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
       
-      // 🎯 새로운 접근: 사용자가 직접 실행할 수 있는 버튼 제공
+      // 🎯 최고의 해결책: 새 창에 자동 입력 버튼 오버레이 생성
       const win = window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      // 스크립트를 클립보드에 복사
-      const directScript = `javascript:(function() { 
-        document.querySelector('#txt_sj').value='${titleInput.replace(/'/g, "\\'")}'; 
-        document.querySelector('#txt_cn').value='${contentInput.replace(/'/g, "\\'")}'; 
-        document.querySelector('#catpchaAnswer').focus();
-        document.querySelector('#catpchaAnswer').style.border='3px solid #ff4444';
-        document.querySelector('#catpchaAnswer').style.background='#fffacd';
-        
-        const inputField = document.querySelector("#catpchaAnswer"); 
-        inputField.addEventListener("input", () => { 
-          const value = inputField.value; 
-          if (/^\\d+$/.test(value) && value.length === 5) { 
-            trimAllInputText(); 
-            if (!validate()) {return 0;} 
-            $(".loading_bar").show(); 
-            checkWebFilter($("#frm")); 
-          } 
-        }); 
-        
-        alert('✅ 자동 입력 완료!\\n\\n캡차 5자리를 입력하면 자동으로 제출됩니다.');
-      })();`;
-      
-      // 클립보드에 복사
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(directScript).then(() => {
-          console.log('✅ 자동 실행 스크립트가 클립보드에 복사됨');
-        }).catch((err) => {
-          console.warn('클립보드 복사 실패:', err);
-        });
-      }
-      
-      // 사용자에게 안내 팝업 표시
-      setTimeout(() => {
-        const instructionModal = document.createElement('div');
-        instructionModal.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.8);
-          z-index: 10002;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-family: Arial, sans-serif;
-        `;
-        
-        instructionModal.innerHTML = `
-          <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 500px;">
-            <h3 style="margin: 0 0 20px 0; color: #333;">🎯 자동 입력 방법</h3>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; color: #333;">새로 열린 창에서 다음 단계를 따라주세요:</p>
-              <p style="margin: 5px 0; color: #555;">1️⃣ <strong>주소창을 클릭</strong></p>
-              <p style="margin: 5px 0; color: #555;">2️⃣ <strong>Ctrl + V</strong> (붙여넣기)</p>
-              <p style="margin: 5px 0; color: #555;">3️⃣ <strong>Enter</strong> 키 누르기</p>
-              <p style="margin: 5px 0; color: #555;">4️⃣ 자동 입력 후 <strong>캡차만 입력</strong></p>
-            </div>
-            <div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin: 15px 0;">
-              <p style="margin: 0; font-size: 14px; color: #2e7d32;">
-                💡 <strong>캡차 5자리를 입력하면 자동으로 제출됩니다!</strong>
+      // 새 창이 로드되면 버튼 추가
+      const addAutoFillButton = () => {
+        try {
+          // 오버레이 생성
+          const overlay = win.document.createElement('div');
+          overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 99999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+          `;
+          
+          overlay.innerHTML = `
+            <div style="background: white; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-width: 400px;">
+              <h2 style="margin: 0 0 20px 0; color: #333; font-size: 24px;">🎯 자동 입력</h2>
+              <p style="margin: 0 0 25px 0; color: #666; font-size: 16px; line-height: 1.5;">
+                아래 버튼을 클릭하면<br>
+                제목과 내용이 자동으로 입력됩니다
               </p>
-            </div>
-            <button onclick="this.parentElement.parentElement.remove()" style="background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; cursor: pointer;">
-              이해했습니다
-            </button>
-            <div style="margin-top: 10px;">
-              <button onclick="copyToClipboard()" style="background: #2196F3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer;">
-                📋 스크립트 다시 복사
+              <button id="autoFillBtn" style="
+                background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                color: white;
+                border: none;
+                padding: 20px 40px;
+                border-radius: 10px;
+                font-size: 18px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+                transition: all 0.3s ease;
+                margin-bottom: 15px;
+                width: 100%;
+              " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                🚀 자동 입력 시작
               </button>
+              <div style="margin-top: 15px;">
+                <button onclick="this.parentElement.parentElement.remove()" style="
+                  background: #666;
+                  color: white;
+                  border: none;
+                  padding: 10px 20px;
+                  border-radius: 6px;
+                  font-size: 14px;
+                  cursor: pointer;
+                ">
+                  취소
+                </button>
+              </div>
             </div>
-          </div>
-        `;
-        
-        // 다시 복사 함수
-        const script = document.createElement('script');
-        script.textContent = `
-          function copyToClipboard() {
-            const scriptToCopy = \`${directScript}\`;
-            navigator.clipboard.writeText(scriptToCopy).then(() => {
-              alert('✅ 스크립트가 클립보드에 복사되었습니다!');
-            }).catch(() => {
-              alert('❌ 복사에 실패했습니다. 수동으로 복사해주세요.');
+          `;
+          
+          // 자동 입력 함수를 새 창에 추가
+          const script = win.document.createElement('script');
+          script.textContent = `
+            function autoFillForm() {
+              console.log('🎯 자동 입력 시작');
+              
+              // 제목과 내용 입력
+              const titleField = document.querySelector('#txt_sj');
+              const contentField = document.querySelector('#txt_cn');
+              const captchaField = document.querySelector('#catpchaAnswer');
+              
+              if (titleField) {
+                titleField.value = '${titleInput.replace(/'/g, "\\'")}';
+                titleField.dispatchEvent(new Event('input', { bubbles: true }));
+                titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
+                console.log('✅ 제목 입력됨');
+              }
+              
+              if (contentField) {
+                contentField.value = '${contentInput.replace(/'/g, "\\'")}';
+                contentField.dispatchEvent(new Event('input', { bubbles: true }));
+                contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
+                console.log('✅ 내용 입력됨');
+              }
+              
+              if (captchaField) {
+                captchaField.focus();
+                captchaField.style.border = '3px solid #ff4444';
+                captchaField.style.background = '#fffacd';
+                
+                // 캡차 자동 제출 리스너 (중복 방지)
+                if (!captchaField._autoSubmitAdded) {
+                  const autoSubmitListener = () => {
+                    const value = captchaField.value;
+                    if (/^\\d+$/.test(value) && value.length === 5) {
+                      console.log('🚀 캡차 5자리 완료, 자동 제출');
+                      setTimeout(() => {
+                        try {
+                          trimAllInputText();
+                          if (!validate()) {
+                            console.error('❌ 폼 검증 실패');
+                            return;
+                          }
+                          $('.loading_bar').show();
+                          checkWebFilter($('#frm'));
+                        } catch (e) {
+                          console.error('제출 오류:', e);
+                          document.getElementById('btn_opnReg').click();
+                        }
+                      }, 300);
+                    }
+                  };
+                  
+                  captchaField.addEventListener('input', autoSubmitListener);
+                  captchaField._autoSubmitAdded = true;
+                }
+              }
+              
+              // 오버레이 제거
+              const overlay = document.querySelector('div[style*="position: fixed"][style*="z-index: 99999"]');
+              if (overlay) overlay.remove();
+              
+              // 성공 알림
+              const notification = document.createElement('div');
+              notification.style.cssText = \`
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 12px;
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                min-width: 300px;
+              \`;
+              
+              notification.innerHTML = \`
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+                  🎯 자동 입력 완료!
+                </div>
+                <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
+                  <div><strong>제목:</strong> ${titleInput.substring(0, 25)}...</div>
+                  <div style="margin-top: 5px;"><strong>내용:</strong> ${contentInput.substring(0, 30)}...</div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
+                  ⚡ <strong>캡차 5자리를 입력하면 자동으로 제출됩니다!</strong>
+                </div>
+                <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer;">✕</button>
+              \`;
+              
+              document.body.appendChild(notification);
+              console.log('🎯 모든 설정 완료!');
+            }
+          `;
+          
+          // 스크립트와 오버레이를 새 창에 추가
+          win.document.head.appendChild(script);
+          win.document.body.appendChild(overlay);
+          
+          // 버튼 클릭 이벤트 연결
+          const autoFillBtn = win.document.getElementById('autoFillBtn');
+          if (autoFillBtn) {
+            autoFillBtn.addEventListener('click', () => {
+              win.autoFillForm();
             });
           }
-        `;
-        document.head.appendChild(script);
-        
-        document.body.appendChild(instructionModal);
-      }, 1000);
+          
+          console.log('✅ 자동 입력 버튼이 새 창에 추가되었습니다!');
+          
+        } catch (e) {
+          console.error('❌ 버튼 생성 실패:', e);
+          // 실패 시 사용자에게 알림
+          alert('자동 버튼 생성에 실패했습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+        }
+      };
+      
+      // 새 창 로드 대기 후 버튼 추가
+      setTimeout(addAutoFillButton, 2000);
+      
+      // 여러 번 시도 (로딩이 느린 경우 대비)
+      setTimeout(addAutoFillButton, 4000);
+      setTimeout(addAutoFillButton, 6000);
       
       // 🔧 수정된 창 닫힘 감지 (confirm 팝업 제거)
       const checkClosed = setInterval(() => {
