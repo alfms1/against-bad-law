@@ -1,25 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Vote Assistant 북마클릿 설치</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-    code { background: #eee; padding: 4px 8px; border-radius: 5px; }
-    a.bookmarklet { display: inline-block; background: #2e7d32; color: white; padding: 10px 16px; border-radius: 6px; font-weight: bold; text-decoration: none; }
-  </style>
+  <title>Vote Launcher</title>
 </head>
 <body>
-  <h1>📌 Vote Assistant 북마클릿</h1>
-  <p>모바일 브라우저에서 <code>vforkorea.com/assem</code>에 접속한 뒤, 아래 북마클릿을 눌러주세요.</p>
-  <p>북마클릿을 길게 눌러 즐겨찾기에 저장해 두면 더 편리하게 쓸 수 있습니다.</p>
+  <h1>오늘 마감 법안 목록</h1>
+  <ul id="lawList"></ul>
+  <button id="startBtn">선택한 항목 투표 시작</button>
 
-  <a class="bookmarklet" href="javascript:(function(){var s=document.createElement('script');s.src='https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';document.body.appendChild(s);})();">
-    ✅ 북마클릿 실행
-  </a>
-
-  <p style="margin-top: 2em; font-size: 0.9em; color: #777;">자동으로 <code>vote=agree</code> 또는 <code>vote=disagree</code>가 링크에 삽입되며, 각 법안 페이지가 새 창으로 하나씩 열립니다.</p>
+  <script src="./vote-bookmarklet.js"></script>
 </body>
 </html>
-
