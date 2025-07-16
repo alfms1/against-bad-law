@@ -391,23 +391,51 @@ javascript:(function() {
     
     // LocalStorage에서 데이터 읽기
     const storedData = localStorage.getItem('autoFillData');
+    const storedAgreeData = localStorage.getItem('autoFillData_agree');
+    const storedDisagreeData = localStorage.getItem('autoFillData_disagree');
+    
     let autoTitle = '';
     let autoContent = '';
     
-    if (storedData) {
+    // URL 파라미터에서 voteType 확인
+    const urlParams = new URLSearchParams(location.search);
+    const voteType = urlParams.get('voteType');
+    
+    console.log('🔍 감지된 투표 타입:', voteType);
+    
+    // voteType에 따라 적절한 데이터 로드
+    if (voteType === 'agree' && storedAgreeData) {
+      try {
+        const data = JSON.parse(storedAgreeData);
+        autoTitle = data.title || '';
+        autoContent = data.content || '';
+        console.log('📦 찬성 데이터 로드:', { autoTitle, autoContent });
+      } catch (e) {
+        console.warn('찬성 데이터 파싱 실패:', e);
+      }
+    } else if (voteType === 'disagree' && storedDisagreeData) {
+      try {
+        const data = JSON.parse(storedDisagreeData);
+        autoTitle = data.title || '';
+        autoContent = data.content || '';
+        console.log('📦 반대 데이터 로드:', { autoTitle, autoContent });
+      } catch (e) {
+        console.warn('반대 데이터 파싱 실패:', e);
+      }
+    } else if (storedData) {
+      // 기존 방식 (하위 호환)
       try {
         const data = JSON.parse(storedData);
         autoTitle = data.title || '';
         autoContent = data.content || '';
-        console.log('📦 저장된 데이터 로드:', { autoTitle, autoContent });
+        console.log('📦 기존 데이터 로드:', { autoTitle, autoContent });
       } catch (e) {
-        console.warn('저장된 데이터 파싱 실패:', e);
+        console.warn('기존 데이터 파싱 실패:', e);
       }
     }
     
-    // URL 파라미터에서도 읽기 (백업)
+    // URL 파라미터에서도 읽기 (최종 백업)
     if (!autoTitle || !autoContent) {
-      const urlParams = new URLSearchParams(location.search);
       autoTitle = autoTitle || decodeURIComponent(urlParams.get('autoTitle') || '');
       autoContent = autoContent || decodeURIComponent(urlParams.get('autoContent') || '');
       console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
