@@ -738,49 +738,39 @@
             document.body.appendChild(notification);
           }
           
-          // 재시도 알림 함수 (에러 메시지 포함)
-          function showRetryNotification(errorMsg = '') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-              position: fixed;
-              top: 20px;
-              right: 20px;
-              background: linear-gradient(135deg, #f44336, #d32f2f);
-              color: white;
-              padding: 15px 20px;
-              border-radius: 8px;
-              z-index: 999999;
-              font-family: Arial, sans-serif;
-              box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-              font-size: 14px;
-              max-width: 350px;
-              border: 2px solid #fff;
-            `;
-            
-            const shortError = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
-            
-            notification.innerHTML = `
-              <div style="font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 18px;">❌</span>
-                방지문자 오류!
-              </div>
-              ${errorMsg ? `<div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px; background: rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">${shortError}</div>` : ''}
-              <div style="font-size: 13px; opacity: 0.9;">
-                캡차 필드가 초기화되었습니다.<br>
-                올바른 5자리 숫자를 다시 입력해주세요.
-              </div>
-              <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.7;">✕</button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // 5초 후 자동 제거
-            setTimeout(() => {
-              if (document.body.contains(notification)) {
-                document.body.removeChild(notification);
-              }
-            }, 5000);
-          }
+        // 알 수 없는 Alert 메시지 알림
+        function showUnknownAlertNotification(alertMessage) {
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 999999;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-size: 14px;
+            max-width: 350px;
+          `;
+          
+          notification.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">⚠️ 알 수 없는 메시지</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px; background: rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">"${alertMessage.substring(0, 60)}${alertMessage.length > 60 ? '...' : ''}"</div>
+            <div style="font-size: 13px; opacity: 0.9;">탭을 유지하고 상황을 확인해주세요.</div>
+            <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
+          `;
+          
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+            if (document.body.contains(notification)) {
+              document.body.removeChild(notification);
+            }
+          }, 5000);
+        }
           
           captchaField._smartCaptchaSet = true;
         }
