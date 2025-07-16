@@ -565,7 +565,7 @@ document.getElementById('modal-ok').onclick = () => {
     });
   }
 
-  alert(`법안 처리 완료!\n찬성: ${agreeBills.length}개\n반대: ${disagreeBills.length}개\n\n각 창에서 북마클릿을 클릭하세요!`);
+  //alert(`법안 처리 완료!\n찬성: ${agreeBills.length}개\n반대: ${disagreeBills.length}개\n\n각 창에서 북마클릿을 클릭하세요!`);
 
   // 혹시 alert가 한 번도 발생하지 않았다면 원복
   setTimeout(() => { window.alert = originalAlert; }, 2000);
