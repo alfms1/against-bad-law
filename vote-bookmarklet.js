@@ -289,42 +289,35 @@
   function startOpinionProcess(selectedBills, titleInput, contentInput) {
     let currentIndex = 0;
     
-    // 🔧 새로운 방식: URL 해시에 데이터 저장 + 페이지 내 스크립트 주입
+    // 🔧 강화된 북마클릿 코드 (localStorage 기반)
     const bookmarkletCode = `javascript:(function(){
-      console.log('🎯 해시 기반 자동 의견 입력 시작');
+      console.log('🎯 localStorage 기반 자동 입력 시작');
       
-      // URL 파라미터에서 데이터 읽기
-      const urlParams = new URLSearchParams(location.search);
-      let autoTitle = urlParams.get('autoTitle') || '';
-      let autoContent = urlParams.get('autoContent') || '';
-      
-      // 디코딩 처리
-      try {
-        autoTitle = decodeURIComponent(autoTitle);
-      } catch(e) {
-        console.log('제목 디코딩 오류:', e);
-      }
+      // 1순위: localStorage에서 데이터 읽기
+      let autoTitle = '';
+      let autoContent = '';
       
       try {
-        autoContent = decodeURIComponent(autoContent);
-      } catch(e) {
-        console.log('내용 디코딩 오류:', e);
-      }
-      
-      console.log('📥 받은 데이터:', { autoTitle, autoContent });
-      
-      // 메시지 리스너 추가
-      window.addEventListener('message', function(event) {
-        if (event.data.type === 'AUTO_FILL_FORM') {
-          console.log('📨 메시지 수신:', event.data);
-          autoTitle = event.data.title;
-          autoContent = event.data.content;
-          setTimeout(fillForm, 1000);
+        const stored = JSON.parse(localStorage.getItem('autoFillData') || '{}');
+        if (stored.title && stored.content) {
+          autoTitle = stored.title;
+          autoContent = stored.content;
+          console.log('📦 localStorage에서 데이터 로드:', { autoTitle, autoContent });
         }
-      });
+      } catch (e) {
+        console.log('localStorage 읽기 실패:', e);
+      }
+      
+      // 2순위: URL 파라미터에서 읽기
+      if (!autoTitle || !autoContent) {
+        const urlParams = new URLSearchParams(location.search);
+        autoTitle = autoTitle || decodeURIComponent(urlParams.get('autoTitle') || '');
+        autoContent = autoContent || decodeURIComponent(urlParams.get('autoContent') || '');
+        console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
+      }
       
       function fillForm() {
-        console.log('🎯 폼 채우기 시작:', { autoTitle, autoContent });
+        console.log('🎯 폼 채우기 시작');
         
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
@@ -341,14 +334,7 @@
           titleField.dispatchEvent(new Event('input', { bubbles: true }));
           titleField.dispatchEvent(new Event('change', { bubbles: true }));
           titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
-          
-          // 바이트 계산 함수 직접 호출
-          if (window.inputLimitByteChecked) {
-            const lengthEl = document.querySelector('#reqTitleLen');
-            if (lengthEl) inputLimitByteChecked(titleField, $(lengthEl));
-          }
-          
-          console.log('✅ 제목 입력 완료:', autoTitle);
+          console.log('✅ 제목 입력 완료:', titleField.value);
         }
         
         if (contentField && autoContent) {
@@ -356,14 +342,7 @@
           contentField.dispatchEvent(new Event('input', { bubbles: true }));
           contentField.dispatchEvent(new Event('change', { bubbles: true }));
           contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
-          
-          // 바이트 계산 함수 직접 호출
-          if (window.inputLimitByteChecked) {
-            const lengthEl = document.querySelector('#reqContentLen');
-            if (lengthEl) inputLimitByteChecked(contentField, $(lengthEl));
-          }
-          
-          console.log('✅ 내용 입력 완료:', autoContent);
+          console.log('✅ 내용 입력 완료:', contentField.value);
         }
         
         if (captchaField) {
@@ -380,13 +359,13 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
             padding: 20px;
             border-radius: 12px;
             z-index: 10000;
             font-family: Arial, sans-serif;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             min-width: 300px;
           \`;
           
@@ -399,23 +378,26 @@
               <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
             </div>
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-              ⚡ <strong>캡차를 입력</strong>하고 <strong>등록 버튼</strong>을 누른 후 <strong>창을 닫아주세요!</strong>
+              ⚡ <strong>캡차를 입력</strong>하고 <strong>등록</strong> 후 <strong>창을 닫아주세요!</strong>
             </div>
-            <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer; font-size: 12px;">✕</button>
+            <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer;">✕</button>
           \`;
           
           document.body.appendChild(notification);
+          
+          // localStorage 정리
+          localStorage.removeItem('autoFillData');
         } else {
           console.error('❌ 자동 입력 실패');
           alert('자동 입력 실패: F12 → Console 확인');
         }
       }
       
-      // 여러 번 시도하여 폼 채우기
+      // 여러 번 시도
       let attempts = 0;
       const tryFill = () => {
         attempts++;
-        console.log(\`🔄 시도 \${attempts}/25\`);
+        console.log(\`🔄 시도 \${attempts}/30\`);
         
         const titleField = document.querySelector('#txt_sj');
         const contentField = document.querySelector('#txt_cn');
@@ -423,16 +405,16 @@
         if (titleField && contentField && (autoTitle || autoContent)) {
           console.log('✅ 조건 만족, 폼 채우기 실행');
           fillForm();
-        } else if (attempts < 25) {
+        } else if (attempts < 30) {
           console.log('⏳ 재시도...');
-          setTimeout(tryFill, 600);
+          setTimeout(tryFill, 500);
         } else {
-          console.error('❌ 25회 시도 후 실패');
+          console.error('❌ 30회 시도 후 실패');
           alert('자동 입력 실패: 페이지 로딩 문제');
         }
       };
       
-      // 즉시 시작
+      // 페이지 상태에 따라 시작
       if (document.readyState === 'complete') {
         tryFill();
       } else {
@@ -443,8 +425,14 @@
       }
     })();`;
 
-    // 이제 북마클릿이 불필요함 (직접 주입 방식)
-    console.log('✅ 직접 스크립트 주입 방식으로 변경 - 북마클릿 불필요');
+    // 클립보드에 북마클릿 복사
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(bookmarkletCode).then(() => {
+        console.log('✅ 북마클릿 코드 클립보드 복사 성공');
+      }).catch((err) => {
+        console.warn('⚠️ 클립보드 복사 실패:', err);
+      });
+    }
 
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
@@ -466,9 +454,12 @@
         <h4>📝 의견 등록 진행 중...</h4>
         <p><strong>진행률:</strong> ${currentIndex}/${selectedBills.length}</p>
         <p><strong>현재:</strong> ${selectedBills[currentIndex]?.title.substring(0, 40)}...</p>
-        <div style="background: #e8f5e8; border: 1px solid #4CAF50; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
-          🚀 <strong>완전 자동화!</strong> 새 창이 열리면 <strong>2초 후 자동으로 입력</strong>됩니다!<br>
-          💡 캡차만 입력하고 등록 버튼을 누르세요!
+        <div style="background: #e3f2fd; border: 1px solid #2196F3; padding: 10px; border-radius: 6px; margin: 10px 0; font-size: 12px;">
+          🔄 <strong>새로운 방식!</strong><br>
+          1️⃣ 잠깐 대기 화면이 나타납니다 (3초)<br>
+          2️⃣ 의견 등록 페이지로 자동 이동<br>
+          3️⃣ 주소창에서 <strong>Ctrl+V</strong> → <strong>Enter</strong><br>
+          4️⃣ 자동 입력 완료!
         </div>
         <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">중단</button>
       `;
@@ -504,111 +495,69 @@
       console.log(`${currentIndex + 1}번째 의견 등록:`, bill.title);
       console.log('새로운 URL:', fullUrl);
       
-      // 🎯 새로운 방식: 새 창에 직접 스크립트 주입
-      const win = window.open(fullUrl, `opinion_${currentIndex}`, 'width=1200,height=800');
+      // 🎯 localStorage + 북마클릿 하이브리드 방식
+      const win = window.open('', `opinion_${currentIndex}`, 'width=1200,height=800');
       
-      // 새 창이 로드되면 스크립트 주입
-      const injectScript = () => {
-        try {
-          const script = win.document.createElement('script');
-          script.textContent = `
-            console.log('🎯 스크립트 주입 성공!');
-            
-            setTimeout(() => {
-              const urlParams = new URLSearchParams(location.search);
-              const autoTitle = decodeURIComponent(urlParams.get('autoTitle') || '');
-              const autoContent = decodeURIComponent(urlParams.get('autoContent') || '');
-              
-              console.log('URL 파라미터:', { autoTitle, autoContent });
-              
-              const titleField = document.querySelector('#txt_sj');
-              const contentField = document.querySelector('#txt_cn');
-              const captchaField = document.querySelector('#catpchaAnswer');
-              
-              console.log('필드 확인:', { titleField: !!titleField, contentField: !!contentField });
-              
-              if (titleField && autoTitle) {
-                titleField.value = autoTitle;
-                titleField.dispatchEvent(new Event('input', { bubbles: true }));
-                titleField.dispatchEvent(new Event('change', { bubbles: true }));
-                titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
-                console.log('✅ 제목 입력:', titleField.value);
-              }
-              
-              if (contentField && autoContent) {
-                contentField.value = autoContent;
-                contentField.dispatchEvent(new Event('input', { bubbles: true }));
-                contentField.dispatchEvent(new Event('change', { bubbles: true }));
-                contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
-                console.log('✅ 내용 입력:', contentField.value);
-              }
-              
-              if (captchaField) {
-                captchaField.focus();
-                captchaField.style.border = '3px solid #ff4444';
-                captchaField.style.background = '#fffacd';
-              }
-              
-              // 성공 알림
-              if (titleField && contentField && autoTitle && autoContent) {
-                const notification = document.createElement('div');
-                notification.style.cssText = \`
-                  position: fixed;
-                  top: 20px;
-                  right: 20px;
-                  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-                  color: white;
-                  padding: 20px;
-                  border-radius: 12px;
-                  z-index: 10000;
-                  font-family: Arial, sans-serif;
-                  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-                  min-width: 300px;
-                \`;
-                
-                notification.innerHTML = \`
-                  <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-                    🎯 자동 입력 완료!
-                  </div>
-                  <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">
-                    <div><strong>제목:</strong> \${autoTitle}</div>
-                    <div style="margin-top: 5px;"><strong>내용:</strong> \${autoContent.substring(0, 50)}\${autoContent.length > 50 ? '...' : ''}</div>
-                  </div>
-                  <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px;">
-                    ⚡ <strong>캡차를 입력</strong>하고 <strong>등록</strong> 후 <strong>창을 닫아주세요!</strong>
-                  </div>
-                  <button onclick="this.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 8px; border-radius: 50%; cursor: pointer;">✕</button>
-                \`;
-                
-                document.body.appendChild(notification);
-              }
-            }, 2000); // 2초 대기 후 실행
-          `;
-          
-          win.document.head.appendChild(script);
-          console.log('✅ 스크립트 주입 완료');
-          
-        } catch (e) {
-          console.error('❌ 스크립트 주입 실패:', e);
-          // 백업: 메시지 방식
-          setTimeout(() => {
-            try {
-              win.postMessage({
-                type: 'AUTO_FILL_FORM',
-                title: titleInput,
-                content: contentInput
-              }, '*');
-            } catch (e2) {
-              console.warn('메시지 전송도 실패:', e2);
-            }
-          }, 3000);
-        }
-      };
+      // 1단계: localStorage에 데이터 저장
+      try {
+        localStorage.setItem('autoFillData', JSON.stringify({
+          title: titleInput,
+          content: contentInput,
+          timestamp: Date.now()
+        }));
+        console.log('✅ localStorage에 데이터 저장됨');
+      } catch (e) {
+        console.warn('localStorage 저장 실패:', e);
+      }
       
-      // 새 창 로드 감지
-      win.addEventListener('load', injectScript);
-      setTimeout(injectScript, 2000); // 백업용 지연 실행
-      setTimeout(injectScript, 5000); // 추가 백업
+      // 2단계: 특별한 HTML 페이지 생성
+      const autoFillHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>자동 입력 중...</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      text-align: center; 
+      padding: 50px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .loading { font-size: 18px; margin: 20px 0; }
+    .countdown { font-size: 24px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>🎯 자동 입력 준비 중...</h2>
+  <div class="loading">의견 등록 페이지로 이동합니다</div>
+  <div class="countdown" id="countdown">3</div>
+  
+  <script>
+    // localStorage에서 데이터 읽기
+    const data = JSON.parse(localStorage.getItem('autoFillData') || '{}');
+    console.log('📥 저장된 데이터:', data);
+    
+    // 카운트다운
+    let count = 3;
+    const countdownEl = document.getElementById('countdown');
+    const timer = setInterval(() => {
+      count--;
+      countdownEl.textContent = count;
+      if (count <= 0) {
+        clearInterval(timer);
+        // 실제 URL로 이동하면서 데이터 전달
+        const targetUrl = '${fullUrl}';
+        location.href = targetUrl;
+      }
+    }, 1000);
+  </script>
+</body>
+</html>`;
+      
+      // 3단계: HTML 페이지 작성
+      win.document.write(autoFillHTML);
+      win.document.close();
       
       // 🔧 수정된 창 닫힘 감지 (confirm 팝업 제거)
       const checkClosed = setInterval(() => {
