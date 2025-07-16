@@ -102,7 +102,7 @@
   const actionButtons = document.createElement('div');
   actionButtons.innerHTML = `
     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">선택한 법안에 의견 등록하기</button>
+      <button id="start-voting" style="width: 100%; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; margin-bottom: 8px;">📝 선택한 법안에 의견 등록하기</button>
       <button id="close-panel" style="width: 100%; padding: 8px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">패널 닫기</button>
       <div style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;">
         새 창에서 제목/내용이 자동 입력됩니다.<br>
