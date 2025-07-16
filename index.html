@@ -2,53 +2,24 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>법안 찬반 버튼 북마클릿</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vote Assistant 북마클릿 설치</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 24px;
-      line-height: 1.6;
-    }
-    button {
-      font-size: 16px;
-      padding: 10px 16px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      margin-top: 16px;
-    }
-    code {
-      background: #eee;
-      padding: 4px 8px;
-      display: block;
-      white-space: pre-wrap;
-      word-break: break-all;
-      border-radius: 6px;
-    }
+    body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+    code { background: #eee; padding: 4px 8px; border-radius: 5px; }
+    a.bookmarklet { display: inline-block; background: #2e7d32; color: white; padding: 10px 16px; border-radius: 6px; font-weight: bold; text-decoration: none; }
   </style>
 </head>
 <body>
+  <h1>📌 Vote Assistant 북마클릿</h1>
+  <p>모바일 브라우저에서 <code>vforkorea.com/assem</code>에 접속한 뒤, 아래 북마클릿을 눌러주세요.</p>
+  <p>북마클릿을 길게 눌러 즐겨찾기에 저장해 두면 더 편리하게 쓸 수 있습니다.</p>
 
-  <h2>🔖 국회 법안 찬반 버튼 북마클릿 등록 안내</h2>
+  <a class="bookmarklet" href="javascript:(function(){var s=document.createElement('script');s.src='https://alfms1.github.io/against-bad-law/vote-bookmarklet.js';document.body.appendChild(s);})();">
+    ✅ 북마클릿 실행
+  </a>
 
-  <p>이 페이지는 북마클릿(Bookmarklet)을 등록하기 위한 안내 페이지입니다.</p>
-
-  <ol>
-    <li><b>아래 코드를 꾹 눌러 전체 복사하세요</b></li>
-    <li><b>브라우저 즐겨찾기(북마크)에 붙여넣기로 저장</b>하세요</li>
-    <li>국회 법안 페이지에 들어간 후, 북마클릿을 실행하면 <b>찬성/반대 버튼</b>이 뜹니다</li>
-  </ol>
-
-  <h3>📋 북마클릿 코드</h3>
-  <code id="bookmarklet">
-javascript:(function(){
-  var s=document.createElement('script');
-  s.src='https://alfms1.github.io/against-bad-law/Bad-Law.js';
-  document.body.appendChild(s);
-})();
-  </code>
-
+  <p style="margin-top: 2em; font-size: 0.9em; color: #777;">자동으로 <code>vote=agree</code> 또는 <code>vote=disagree</code>가 링크에 삽입되며, 각 법안 페이지가 새 창으로 하나씩 열립니다.</p>
 </body>
 </html>
+
