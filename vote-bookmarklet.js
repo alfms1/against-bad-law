@@ -61,6 +61,22 @@ function showCaptchaErrorNotification(errorMsg) {
     }
   }, 7000);
 }javascript:(function() {
+// 즉시 confirm 후킹 (모든 도메인에서)
+const originalConfirm = window.confirm;
+window.confirm = function(msg) {
+  if (msg && (
+      msg.includes('이미 의견을 등록하셨습니다') ||
+      msg.includes('수정 화면으로 이동하시겠습니까') ||
+      msg.includes('이미 등록')
+  )) {
+    setTimeout(() => {
+      try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+    }, 500);
+    return false;
+  }
+  return originalConfirm.call(this, msg);
+};
+
 const currentDomain = window.location.hostname;
 // console.log('🎯 범용 북마클릿 실행 - 도메인:', currentDomain);
 
@@ -939,114 +955,123 @@ captchaField._smartCaptchaSet = true;
 }
 }
 
-// pal.assembly.go.kr에서만 실행
+// pal.assembly.go.kr에서만 실행 - 즉시 confirm 후킹
 if (currentDomain === 'pal.assembly.go.kr') {
-  // confirm 후킹: 특정 메시지면 자동 취소 + 탭 닫기
-  const originalConfirm = window.confirm;
-  window.confirm = function(msg) {
-    if (msg && (
-        msg.includes('이미 의견을 등록하셨습니다') ||
-        msg.includes('수정 화면으로 이동하시겠습니까') ||
-        msg.includes('이미 의견을 등록했습니다')
-    )) {
-      // 알림 표시
-      const notification = document.createElement('div');
-      Object.assign(notification.style, {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: 'linear-gradient(135deg, #ff9800, #f57c00)',
-        color: 'white',
-        padding: '20px',
-        borderRadius: '12px',
-        zIndex: '999999',
-        fontFamily: 'Arial, sans-serif',
-        boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
-        textAlign: 'center',
-        fontSize: '16px'
-      });
+  // 페이지 로드 전에도 즉시 confirm 후킹 실행
+  (function() {
+    const originalConfirm = window.confirm;
+    window.confirm = function(msg) {
+      console.log('🔍 Confirm 메시지 감지:', msg); // 디버깅용
       
-      notification.innerHTML = `
-        <div style="font-size: 24px; margin-bottom: 10px;">ℹ️</div>
-        <div style="font-weight: bold; margin-bottom: 8px;">이미 등록된 법안</div>
-        <div style="font-size: 14px; opacity: 0.9;">취소하고 탭을 닫습니다...</div>
-      `;
+      if (msg && (
+          msg.includes('이미 의견을 등록하셨습니다') ||
+          msg.includes('수정 화면으로 이동하시겠습니까') ||
+          msg.includes('이미 의견을 등록했습니다') ||
+          msg.includes('이미 등록')
+      )) {
+        console.log('✅ 이미 등록 메시지 매칭됨'); // 디버깅용
+        
+        // 알림 표시
+        const notification = document.createElement('div');
+        Object.assign(notification.style, {
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          zIndex: '999999',
+          fontFamily: 'Arial, sans-serif',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+          textAlign: 'center',
+          fontSize: '16px'
+        });
+        
+        notification.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 10px;">ℹ️</div>
+          <div style="font-weight: bold; margin-bottom: 8px;">이미 등록된 법안</div>
+          <div style="font-size: 14px; opacity: 0.9;">취소하고 탭을 닫습니다...</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+        }, 1000);
+        
+        return false; // '취소' 선택
+      }
+      return originalConfirm.call(this, msg);
+    };
+  })();
+  
+  // alert 후킹도 즉시 실행
+  (function() {
+    const originalAlert = window.alert;
+    window.alert = function(msg) {
+      // 성공 메시지들 감지
+      if (msg && (
+          msg.includes('정상적으로 등록되었습니다') ||
+          msg.includes('등록되었습니다') ||
+          msg.includes('완료되었습니다') ||
+          msg.includes('성공적으로') ||
+          msg.includes('접수되었습니다')
+      )) {
+        // 성공 알림 표시 후 탭 닫기
+        showSuccessNotification();
+        setTimeout(() => {
+          try { 
+            window.close(); 
+          } catch (e) { 
+            window.location.href = 'about:blank'; 
+          }
+        }, 1500);
+        return originalAlert.call(this, msg);
+      }
       
-      document.body.appendChild(notification);
+      // "이미 등록" 메시지들 처리 - 자동으로 탭 닫기
+      if (msg && (
+          msg.includes('이미 의견을 등록하셨습니다') ||
+          msg.includes('수정 화면으로 이동하시겠습니까')
+      )) {
+        // 알림 표시
+        const notification = document.createElement('div');
+        Object.assign(notification.style, {
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          zIndex: '999999',
+          fontFamily: 'Arial, sans-serif',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+          textAlign: 'center',
+          fontSize: '16px'
+        });
+        
+        notification.innerHTML = `
+          <div style="font-size: 24px; margin-bottom: 10px;">ℹ️</div>
+          <div style="font-weight: bold; margin-bottom: 8px;">이미 등록된 법안</div>
+          <div style="font-size: 14px; opacity: 0.9;">취소하고 탭을 닫습니다...</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+        }, 1000);
+        
+        return originalAlert.call(this, msg);
+      }
       
-      setTimeout(() => {
-        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-      }, 1000);
-      
-      return false; // '취소' 선택
-    }
-    return originalConfirm.call(this, msg);
-  };
-
-  // alert 후킹: 성공 메시지면 자동으로 탭 닫기
-  const originalAlert = window.alert;
-  window.alert = function(msg) {
-    // 성공 메시지들 감지
-    if (msg && (
-        msg.includes('정상적으로 등록되었습니다') ||
-        msg.includes('등록되었습니다') ||
-        msg.includes('완료되었습니다') ||
-        msg.includes('성공적으로') ||
-        msg.includes('접수되었습니다')
-    )) {
-      // 성공 알림 표시 후 탭 닫기
-      showSuccessNotification();
-      setTimeout(() => {
-        try { 
-          window.close(); 
-        } catch (e) { 
-          window.location.href = 'about:blank'; 
-        }
-      }, 1500);
       return originalAlert.call(this, msg);
-    }
-    
-    // "이미 등록" 메시지들 처리 - 자동으로 탭 닫기
-    if (msg && (
-        msg.includes('이미 의견을 등록하셨습니다') ||
-        msg.includes('수정 화면으로 이동하시겠습니까')
-    )) {
-      // 알림 표시
-      const notification = document.createElement('div');
-      Object.assign(notification.style, {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: 'linear-gradient(135deg, #ff9800, #f57c00)',
-        color: 'white',
-        padding: '20px',
-        borderRadius: '12px',
-        zIndex: '999999',
-        fontFamily: 'Arial, sans-serif',
-        boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
-        textAlign: 'center',
-        fontSize: '16px'
-      });
-      
-      notification.innerHTML = `
-        <div style="font-size: 24px; margin-bottom: 10px;">ℹ️</div>
-        <div style="font-weight: bold; margin-bottom: 8px;">이미 등록된 법안</div>
-        <div style="font-size: 14px; opacity: 0.9;">취소하고 탭을 닫습니다...</div>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-      }, 1000);
-      
-      return originalAlert.call(this, msg);
-    }
-    
-    return originalAlert.call(this, msg);
-  };
+    };
+  })();
 }
 
 // 초기 성공 알림
