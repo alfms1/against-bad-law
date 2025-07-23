@@ -140,38 +140,50 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
   let dateCategory = '📋 마감 정보 없음';
   let isToday = false;
   let dateSpan = null;
+  let spanClass = 'none';
   
-  // 각 클래스별로 span 찾기
-  const redSpan = tr.querySelector('td span.red');
-  const orangeSpan = tr.querySelector('td span.orange');
-  const graySpan = tr.querySelector('td span.gray');
+  // 해당 행의 모든 td 요소를 확인
+  const tds = tr.querySelectorAll('td');
   
-  if (redSpan) {
-    const dateText = redSpan.textContent.trim();
-    if (dateText === '오늘 마감') {
-      dateCategory = '🔥 오늘 마감';
-      isToday = true;
-    } else if (dateText && dateText.trim() !== '') {
-      dateCategory = `🔴 ${dateText}`;
+  for (let td of tds) {
+    // 각 td 안에서 span 요소들 확인
+    const redSpan = td.querySelector('span.red');
+    const orangeSpan = td.querySelector('span.orange');
+    const graySpan = td.querySelector('span.gray');
+    
+    if (redSpan) {
+      const dateText = redSpan.textContent.trim();
+      if (dateText === '오늘 마감') {
+        dateCategory = '🔥 오늘 마감';
+        isToday = true;
+      } else if (dateText && dateText.trim() !== '') {
+        dateCategory = `🔴 ${dateText}`;
+      }
+      dateSpan = redSpan;
+      spanClass = 'red';
+      break;
+    } else if (orangeSpan) {
+      const dateText = orangeSpan.textContent.trim();
+      if (dateText === '내일 마감') {
+        dateCategory = '⏰ 내일 마감';
+      } else if (dateText && dateText.trim() !== '') {
+        dateCategory = `🟠 ${dateText}`;
+      }
+      dateSpan = orangeSpan;
+      spanClass = 'orange';
+      break;
+    } else if (graySpan) {
+      const dateText = graySpan.textContent.trim();
+      if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // YYYY-MM-DD 형식의 날짜
+        dateCategory = `📅 ${dateText}`;
+      } else if (dateText && dateText.trim() !== '') {
+        dateCategory = `⚫ ${dateText}`;
+      }
+      dateSpan = graySpan;
+      spanClass = 'gray';
+      break;
     }
-    dateSpan = redSpan;
-  } else if (orangeSpan) {
-    const dateText = orangeSpan.textContent.trim();
-    if (dateText === '내일 마감') {
-      dateCategory = '⏰ 내일 마감';
-    } else if (dateText && dateText.trim() !== '') {
-      dateCategory = `🟠 ${dateText}`;
-    }
-    dateSpan = orangeSpan;
-  } else if (graySpan) {
-    const dateText = graySpan.textContent.trim();
-    if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // YYYY-MM-DD 형식의 날짜
-      dateCategory = `📅 ${dateText}`;
-    } else if (dateText && dateText.trim() !== '') {
-      dateCategory = `⚫ ${dateText}`;
-    }
-    dateSpan = graySpan;
   }
   
   const billData = {
@@ -181,9 +193,7 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
     dateCategory: dateCategory,
     isToday: isToday,
     originalDateText: dateSpan ? dateSpan.textContent.trim() : '',
-    spanClass: dateSpan ? (dateSpan.classList.contains('red') ? 'red' : 
-                          dateSpan.classList.contains('orange') ? 'orange' : 
-                          dateSpan.classList.contains('gray') ? 'gray' : 'none') : 'none'
+    spanClass: spanClass
   };
   
   allBills.push(billData);
