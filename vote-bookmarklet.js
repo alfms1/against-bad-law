@@ -351,13 +351,6 @@ return;
 const agreeBills = selectedBills.filter(bill => bill.vote === 'agree');
 const disagreeBills = selectedBills.filter(bill => bill.vote === 'disagree');
 
-// 주요 선택에 따라 기본값 결정
-const isMainlyAgree = agreeBills.length >= disagreeBills.length;
-const defaultTitle = isMainlyAgree ? '이 법안에 찬성합니다' : '이 법안을 반대합니다';
-const defaultContent = isMainlyAgree ? 
-'국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.' : 
-'국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.';
-
 // 입력 모달 생성
 const modalOverlay = document.createElement('div');
 Object.assign(modalOverlay.style, {
@@ -405,7 +398,19 @@ ${agreeBills.length > 0 && disagreeBills.length > 0 ?
   ℹ️ 찬성 ${agreeBills.length}개, 반대 ${disagreeBills.length}개 법안이 선택되었습니다.
 </div>` : ''
 }
-<div style="margin-bottom: 15px;">
+
+${agreeBills.length > 0 ? `
+<div style="
+  background: #e8f5e8;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #4caf50;
+">
+<h4 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 16px;">
+✅ 찬성 법안 (${agreeBills.length}개)
+</h4>
+<div style="margin-bottom: 10px;">
 <label style="
   display: block;
   margin-bottom: 5px;
@@ -414,17 +419,17 @@ ${agreeBills.length > 0 && disagreeBills.length > 0 ?
 ">
 제목:
 </label>
-<input type="text" id="modal-title" placeholder="예: 이 법안을 반대합니다" 
+<input type="text" id="modal-agree-title" 
        style="
          width: 100%;
-         padding: 10px;
+         padding: 8px;
          border: 2px solid #ddd;
          border-radius: 6px;
          font-size: 14px;
        "
-       value="${defaultTitle}">
+       value="이 법안에 찬성합니다">
 </div>
-<div style="margin-bottom: 20px;">
+<div>
 <label style="
   display: block;
   margin-bottom: 5px;
@@ -433,17 +438,73 @@ ${agreeBills.length > 0 && disagreeBills.length > 0 ?
 ">
 내용:
 </label>
-<textarea id="modal-content" placeholder="예: 국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다"
+<textarea id="modal-agree-content" 
           style="
             width: 100%;
-            height: 100px;
-            padding: 10px;
+            height: 80px;
+            padding: 8px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 14px;
             resize: vertical;
-          ">${defaultContent}</textarea>
+          ">국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.</textarea>
 </div>
+</div>
+` : ''}
+
+${disagreeBills.length > 0 ? `
+<div style="
+  background: #ffebee;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #f44336;
+">
+<h4 style="margin: 0 0 10px 0; color: #c62828; font-size: 16px;">
+❌ 반대 법안 (${disagreeBills.length}개)
+</h4>
+<div style="margin-bottom: 10px;">
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+제목:
+</label>
+<input type="text" id="modal-disagree-title" 
+       style="
+         width: 100%;
+         padding: 8px;
+         border: 2px solid #ddd;
+         border-radius: 6px;
+         font-size: 14px;
+       "
+       value="이 법안을 반대합니다">
+</div>
+<div>
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+내용:
+</label>
+<textarea id="modal-disagree-content" 
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+          ">국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.</textarea>
+</div>
+</div>
+` : ''}
+
 <div style="
   background: #fff3e0;
   padding: 12px;
@@ -490,11 +551,19 @@ document.body.appendChild(modalOverlay);
 
 // 확인 버튼
 document.getElementById('modal-ok').onclick = () => {
-  const titleInput = document.getElementById('modal-title').value.trim();
-  const contentInput = document.getElementById('modal-content').value.trim();
+  const agreeTitleInput = document.getElementById('modal-agree-title')?.value.trim() || '';
+  const agreeContentInput = document.getElementById('modal-agree-content')?.value.trim() || '';
+  const disagreeTitleInput = document.getElementById('modal-disagree-title')?.value.trim() || '';
+  const disagreeContentInput = document.getElementById('modal-disagree-content')?.value.trim() || '';
 
-  if (!titleInput || !contentInput) {
-    alert('제목과 내용을 모두 입력해주세요.');
+  // 선택된 법안이 있는데 해당 메시지가 비어있으면 경고
+  if (agreeBills.length > 0 && (!agreeTitleInput || !agreeContentInput)) {
+    alert('찬성 법안의 제목과 내용을 모두 입력해주세요.');
+    return;
+  }
+  
+  if (disagreeBills.length > 0 && (!disagreeTitleInput || !disagreeContentInput)) {
+    alert('반대 법안의 제목과 내용을 모두 입력해주세요.');
     return;
   }
 
@@ -516,19 +585,16 @@ document.getElementById('modal-ok').onclick = () => {
 
   // 찬성 법안들 처리
   if (agreeBills.length > 0) {
-    const agreeTitle = '이 법안에 찬성합니다';
-    const agreeContent = '국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.';
-
     localStorage.setItem('autoFillData_agree', JSON.stringify({
-      title: agreeTitle,
-      content: agreeContent,
+      title: agreeTitleInput,
+      content: agreeContentInput,
       timestamp: Date.now()
     }));
 
     agreeBills.forEach((bill) => {
       const url = new URL(bill.link);
-      url.searchParams.set('autoTitle', encodeURIComponent(agreeTitle));
-      url.searchParams.set('autoContent', encodeURIComponent(agreeContent));
+      url.searchParams.set('autoTitle', encodeURIComponent(agreeTitleInput));
+      url.searchParams.set('autoContent', encodeURIComponent(agreeContentInput));
       url.searchParams.set('voteType', 'agree');
       
       const link = document.createElement('a');
@@ -544,15 +610,15 @@ document.getElementById('modal-ok').onclick = () => {
   // 반대 법안들 처리
   if (disagreeBills.length > 0) {
     localStorage.setItem('autoFillData_disagree', JSON.stringify({
-      title: titleInput,
-      content: contentInput,
+      title: disagreeTitleInput,
+      content: disagreeContentInput,
       timestamp: Date.now()
     }));
 
     disagreeBills.forEach((bill) => {
       const url = new URL(bill.link);
-      url.searchParams.set('autoTitle', encodeURIComponent(titleInput));
-      url.searchParams.set('autoContent', encodeURIComponent(contentInput));
+      url.searchParams.set('autoTitle', encodeURIComponent(disagreeTitleInput));
+      url.searchParams.set('autoContent', encodeURIComponent(disagreeContentInput));
       url.searchParams.set('voteType', 'disagree');
       
       const link = document.createElement('a');
@@ -564,8 +630,6 @@ document.getElementById('modal-ok').onclick = () => {
       document.body.removeChild(link);
     });
   }
-
-  //alert(`법안 처리 완료!\n찬성: ${agreeBills.length}개\n반대: ${disagreeBills.length}개\n\n각 창에서 북마클릿을 클릭하세요!`);
 
   // 혹시 alert가 한 번도 발생하지 않았다면 원복
   setTimeout(() => { window.alert = originalAlert; }, 2000);
