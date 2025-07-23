@@ -976,11 +976,41 @@ if (currentDomain === 'pal.assembly.go.kr') {
       return originalAlert.call(this, msg);
     }
     
-    // 기존 "이미 등록" 메시지 처리
-    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
+    // "이미 등록" 메시지들 처리 - 자동으로 탭 닫기
+    if (msg && (
+        msg.includes('이미 의견을 등록하셨습니다') ||
+        msg.includes('수정 화면으로 이동하시겠습니까')
+    )) {
+      // 알림 표시
+      const notification = document.createElement('div');
+      Object.assign(notification.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+        color: 'white',
+        padding: '20px',
+        borderRadius: '12px',
+        zIndex: '999999',
+        fontFamily: 'Arial, sans-serif',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+        textAlign: 'center',
+        fontSize: '16px'
+      });
+      
+      notification.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 10px;">ℹ️</div>
+        <div style="font-weight: bold; margin-bottom: 8px;">이미 등록된 법안</div>
+        <div style="font-size: 14px; opacity: 0.9;">취소하고 탭을 닫습니다...</div>
+      `;
+      
+      document.body.appendChild(notification);
+      
       setTimeout(() => {
         try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-      }, 200);
+      }, 1000);
+      
       return originalAlert.call(this, msg);
     }
     
