@@ -362,6 +362,7 @@ function renderBills(billsToShow) {
   
   billsToShow.forEach((bill, index) => {
     const shortTitle = bill.title.length > 50 ? bill.title.substring(0, 50) + '...' : bill.title;
+    const currentVote = billStates[bill.link];
     
     const billItem = document.createElement('div');
     Object.assign(billItem.style, {
@@ -401,6 +402,7 @@ function renderBills(billsToShow) {
       border-radius: 4px;
       cursor: pointer;
       font-size: 12px;
+      opacity: ${currentVote === 'agree' ? '1' : (currentVote === 'disagree' ? '0.5' : '1')};
     ">
     찬성
     </button>
@@ -412,6 +414,7 @@ function renderBills(billsToShow) {
       border-radius: 4px;
       cursor: pointer;
       font-size: 12px;
+      opacity: ${currentVote === 'disagree' ? '1' : (currentVote === 'agree' ? '0.5' : '1')};
     ">
     반대
     </button>
@@ -419,27 +422,12 @@ function renderBills(billsToShow) {
       margin-left: 8px;
       font-weight: bold;
       font-size: 12px;
+      color: ${currentVote === 'agree' ? '#2e7d32' : (currentVote === 'disagree' ? '#c62828' : '#666')};
     ">
-    ${billStates[bill.link] ? (billStates[bill.link] === 'agree' ? '찬성' : '반대') : '미선택'}
+    ${currentVote === 'agree' ? '찬성' : (currentVote === 'disagree' ? '반대' : '미선택')}
     </span>
     </div>
     `;
-
-    // 기존 상태 복원
-    if (billStates[bill.link]) {
-      const buttons = billItem.querySelectorAll('.vote-btn');
-      buttons.forEach(btn => {
-        if ((billStates[bill.link] === 'agree' && btn.classList.contains('agree')) ||
-            (billStates[bill.link] === 'disagree' && btn.classList.contains('disagree'))) {
-          btn.style.opacity = '1';
-        } else {
-          btn.style.opacity = '0.5';
-        }
-      });
-      
-      const statusSpan = billItem.querySelector('.vote-status');
-      statusSpan.style.color = billStates[bill.link] === 'agree' ? '#2e7d32' : '#c62828';
-    }
 
     billsList.appendChild(billItem);
   });
@@ -470,15 +458,8 @@ const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
 // 상태 저장
 billStates[billId] = voteType;
 
-const statusSpan = controlPanel.querySelector(`span[data-bill-id="${billId}"]`);
-statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
-statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
-
-const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
-const buttons = billDiv.querySelectorAll('.vote-btn');
-buttons.forEach(btn => {
-btn.style.opacity = btn === e.target ? '1' : '0.5';
-});
+// 즉시 렌더링 업데이트
+renderBills(currentBills);
 }
 });
 
