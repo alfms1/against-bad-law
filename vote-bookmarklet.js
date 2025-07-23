@@ -126,10 +126,9 @@ async function loadAllBills() {
 const totalLoaded = await loadAllBills();
 loadingNotification.innerHTML = `✅ 총 ${totalLoaded}개 법안 로딩 완료!`;
 
-// 2. 모든 법안 데이터 수집 및 분류
+// 2. 모든 법안 데이터 수집 및 날짜별 분류
 const allBills = [];
-const todayBills = [];
-const otherBills = [];
+const billsByDate = {}; // 날짜별 법안 저장
 
 document.querySelectorAll('tr[data-idx]').forEach(tr => {
   const titleElement = tr.querySelector('.content .t');
@@ -139,22 +138,42 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
   if (!titleElement || !voteLink) return;
   
   const title = titleElement.textContent.trim();
-  const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
+  let dateCategory = '📋 마감 정보 없음';
+  let isToday = false;
+  
+  if (redSpan) {
+    const dateText = redSpan.textContent.trim();
+    
+    if (dateText === '오늘 마감') {
+      dateCategory = '🔥 오늘 마감';
+      isToday = true;
+    } else if (dateText === '내일 마감') {
+      dateCategory = '⏰ 내일 마감';
+    } else if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // 2025-08-06 형식의 날짜
+      dateCategory = `📅 ${dateText}`;
+    } else if (dateText && dateText.trim() !== '') {
+      // 기타 모든 텍스트를 개별 카테고리로
+      dateCategory = `📋 ${dateText}`;
+    }
+  }
   
   const billData = {
     title: title,
     link: voteLink.href,
     element: tr,
-    isToday: isToday
+    dateCategory: dateCategory,
+    isToday: isToday,
+    originalDateText: redSpan ? redSpan.textContent.trim() : ''
   };
   
   allBills.push(billData);
   
-  if (isToday) {
-    todayBills.push(billData);
-  } else {
-    otherBills.push(billData);
+  // 날짜별로 분류
+  if (!billsByDate[dateCategory]) {
+    billsByDate[dateCategory] = [];
   }
+  billsByDate[dateCategory].push(billData);
 });
 
 // 로딩 알림 제거
@@ -164,7 +183,34 @@ setTimeout(() => {
   }
 }, 2000);
 
-// 3. 컨트롤 패널 생성 (모바일 최적화)
+// 3. 날짜 카테고리 정렬 (우선순위: 오늘 마감 → 내일 마감 → 날짜 → 기타)
+const sortedDateCategories = Object.keys(billsByDate).sort((a, b) => {
+  // 1순위: 오늘 마감
+  if (a === '🔥 오늘 마감') return -1;
+  if (b === '🔥 오늘 마감') return 1;
+  
+  // 2순위: 내일 마감
+  if (a === '⏰ 내일 마감') return -1;
+  if (b === '⏰ 내일 마감') return 1;
+  
+  // 3순위: YYYY-MM-DD 형식 날짜들 (날짜 순으로 정렬)
+  const aIsDate = a.startsWith('📅 ');
+  const bIsDate = b.startsWith('📅 ');
+  
+  if (aIsDate && bIsDate) {
+    const aDate = a.substring(2); // '📅 ' 제거
+    const bDate = b.substring(2);
+    return aDate.localeCompare(bDate);
+  }
+  
+  if (aIsDate && !bIsDate) return -1;
+  if (!aIsDate && bIsDate) return 1;
+  
+  // 4순위: 기타 텍스트들 (알파벳 순)
+  return a.localeCompare(b);
+});
+
+// 4. 컨트롤 패널 생성 (모바일 최적화)
 const controlPanel = document.createElement('div');
 controlPanel.id = 'vote-control-panel';
 const isMobile = window.innerWidth <= 768;
@@ -186,12 +232,19 @@ fontFamily: 'Arial, sans-serif',
 fontSize: isMobile ? '16px' : '14px'
 });
 
-// 4. 헤더 및 필터 드롭다운
+// 5. 헤더 및 날짜 필터 드롭다운
 const header = document.createElement('div');
+
+// 드롭다운 옵션 생성
+const dropdownOptions = sortedDateCategories.map(category => {
+  const count = billsByDate[category].length;
+  return `<option value="${category}">${category} (${count}개)</option>`;
+}).join('');
+
 header.innerHTML = `
 <h3 style="margin: 0 0 15px 0; color: #333;">📝 법안 선택 시스템</h3>
 <div style="margin-bottom: 15px;">
-<label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">법안 필터:</label>
+<label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">마감일별 필터:</label>
 <select id="bill-filter" style="
   width: 100%; 
   padding: 8px; 
@@ -200,9 +253,8 @@ header.innerHTML = `
   font-size: 14px;
   margin-bottom: 10px;
 ">
-  <option value="today">오늘 마감 (${todayBills.length}개)</option>
-  <option value="other">기타 법안 (${otherBills.length}개)</option>
-  <option value="all">전체 법안 (${allBills.length}개)</option>
+  ${dropdownOptions}
+  <option value="all">🗂️ 전체 법안 (${allBills.length}개)</option>
 </select>
 </div>
 <div style="margin-bottom: 15px;">
@@ -213,12 +265,12 @@ header.innerHTML = `
 `;
 controlPanel.appendChild(header);
 
-// 5. 법안 목록 컨테이너
+// 6. 법안 목록 컨테이너
 const billsList = document.createElement('div');
 billsList.id = 'bills-list';
 controlPanel.appendChild(billsList);
 
-// 6. 실행 버튼들
+// 7. 실행 버튼들
 const actionButtons = document.createElement('div');
 actionButtons.innerHTML = `
 <div style="
@@ -265,11 +317,11 @@ actionButtons.innerHTML = `
 controlPanel.appendChild(actionButtons);
 document.body.appendChild(controlPanel);
 
-// 7. 현재 표시된 법안들과 상태 관리
+// 8. 현재 표시된 법안들과 상태 관리
 let currentBills = [];
 let billStates = {}; // 법안별 투표 상태 저장
 
-// 8. 법안 목록 렌더링 함수
+// 9. 법안 목록 렌더링 함수
 function renderBills(billsToShow) {
   currentBills = billsToShow;
   billsList.innerHTML = '';
@@ -299,6 +351,13 @@ function renderBills(billsToShow) {
       line-height: 1.3;
     ">
     ${bill.isToday ? '🔥 ' : ''}${shortTitle}
+    </div>
+    <div style="
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+    ">
+    ${bill.dateCategory}
     </div>
     <div style="
       display: flex;
@@ -357,20 +416,19 @@ function renderBills(billsToShow) {
   });
 }
 
-// 9. 초기 렌더링 (오늘 마감 법안 먼저 표시)
-renderBills(todayBills);
+// 10. 초기 렌더링 (오늘 마감 법안 먼저 표시, 없으면 첫 번째 카테고리)
+const initialBills = billsByDate['🔥 오늘 마감'] || billsByDate[sortedDateCategories[0]] || [];
+renderBills(initialBills);
 
-// 10. 이벤트 리스너들
+// 11. 이벤트 리스너들
 
 // 필터 변경
 document.getElementById('bill-filter').addEventListener('change', (e) => {
   const filterValue = e.target.value;
-  if (filterValue === 'today') {
-    renderBills(todayBills);
-  } else if (filterValue === 'other') {
-    renderBills(otherBills);
-  } else {
+  if (filterValue === 'all') {
     renderBills(allBills);
+  } else {
+    renderBills(billsByDate[filterValue] || []);
   }
 });
 
