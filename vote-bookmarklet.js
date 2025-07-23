@@ -974,13 +974,15 @@ notification.innerHTML = `
 document.body.appendChild(notification);
 }
 
-// 성공 메시지 confirm 처리
+// 성공 메시지 confirm 처리 (강화된 버전)
 const originalConfirm = window.confirm;
 window.confirm = function(msg) {
+  console.log('🔍 Confirm 메시지 감지:', msg); // 디버깅용
   if (msg && (msg.includes('정상적으로 등록되었습니다') || 
               msg.includes('등록되었습니다') || 
               msg.includes('접수되었습니다') ||
               msg.includes('완료되었습니다'))) {
+    console.log('✅ 성공 메시지 확인! 탭을 닫습니다.'); // 디버깅용
     setTimeout(() => {
       try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
     }, 200);
@@ -988,6 +990,49 @@ window.confirm = function(msg) {
   }
   return originalConfirm.call(this, msg);
 };
+
+// 추가: alert도 처리 (혹시 confirm이 아닌 alert일 경우)
+const originalAlert = window.alert;
+window.alert = function(msg) {
+  console.log('🔍 Alert 메시지 감지:', msg); // 디버깅용
+  if (msg && (msg.includes('정상적으로 등록되었습니다') || 
+              msg.includes('등록되었습니다') || 
+              msg.includes('접수되었습니다') ||
+              msg.includes('완료되었습니다'))) {
+    console.log('✅ Alert 성공 메시지 확인! 탭을 닫습니다.'); // 디버깅용
+    setTimeout(() => {
+      try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+    }, 200);
+  }
+  return originalAlert.call(this, msg);
+};
+
+// 추가: DOM 변화 감지로 팝업 확인
+const observer = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type === 'childList') {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === 1 && node.textContent) {
+          const text = node.textContent;
+          if (text.includes('정상적으로 등록되었습니다') || 
+              text.includes('등록되었습니다') || 
+              text.includes('접수되었습니다') ||
+              text.includes('완료되었습니다')) {
+            console.log('✅ DOM에서 성공 메시지 발견! 탭을 닫습니다.'); // 디버깅용
+            setTimeout(() => {
+              try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+            }, 1000);
+          }
+        }
+      });
+    }
+  });
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});
 
 // 페이지 로딩 완료 후 실행
 if (document.readyState === 'complete') {
