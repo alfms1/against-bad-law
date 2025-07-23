@@ -133,29 +133,45 @@ const billsByDate = {}; // 날짜별 법안 저장
 document.querySelectorAll('tr[data-idx]').forEach(tr => {
   const titleElement = tr.querySelector('.content .t');
   const voteLink = tr.querySelector('a[href*="forInsert.do"]');
-  const redSpan = tr.querySelector('td span.red');
   
   if (!titleElement || !voteLink) return;
   
   const title = titleElement.textContent.trim();
   let dateCategory = '📋 마감 정보 없음';
   let isToday = false;
+  let dateSpan = null;
+  
+  // 각 클래스별로 span 찾기
+  const redSpan = tr.querySelector('td span.red');
+  const orangeSpan = tr.querySelector('td span.orange');
+  const graySpan = tr.querySelector('td span.gray');
   
   if (redSpan) {
     const dateText = redSpan.textContent.trim();
-    
     if (dateText === '오늘 마감') {
       dateCategory = '🔥 오늘 마감';
       isToday = true;
-    } else if (dateText === '내일 마감') {
+    } else if (dateText && dateText.trim() !== '') {
+      dateCategory = `🔴 ${dateText}`;
+    }
+    dateSpan = redSpan;
+  } else if (orangeSpan) {
+    const dateText = orangeSpan.textContent.trim();
+    if (dateText === '내일 마감') {
       dateCategory = '⏰ 내일 마감';
-    } else if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      // 2025-08-06 형식의 날짜
+    } else if (dateText && dateText.trim() !== '') {
+      dateCategory = `🟠 ${dateText}`;
+    }
+    dateSpan = orangeSpan;
+  } else if (graySpan) {
+    const dateText = graySpan.textContent.trim();
+    if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // YYYY-MM-DD 형식의 날짜
       dateCategory = `📅 ${dateText}`;
     } else if (dateText && dateText.trim() !== '') {
-      // 기타 모든 텍스트를 개별 카테고리로
-      dateCategory = `📋 ${dateText}`;
+      dateCategory = `⚫ ${dateText}`;
     }
+    dateSpan = graySpan;
   }
   
   const billData = {
@@ -164,7 +180,10 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
     element: tr,
     dateCategory: dateCategory,
     isToday: isToday,
-    originalDateText: redSpan ? redSpan.textContent.trim() : ''
+    originalDateText: dateSpan ? dateSpan.textContent.trim() : '',
+    spanClass: dateSpan ? (dateSpan.classList.contains('red') ? 'red' : 
+                          dateSpan.classList.contains('orange') ? 'orange' : 
+                          dateSpan.classList.contains('gray') ? 'gray' : 'none') : 'none'
   };
   
   allBills.push(billData);
