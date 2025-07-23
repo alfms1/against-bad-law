@@ -974,7 +974,7 @@ notification.innerHTML = `
 document.body.appendChild(notification);
 }
 
-// 성공 메시지 confirm 처리 (강화된 버전)
+// 성공 메시지 confirm 처리 (즉시 처리 버전)
 const originalConfirm = window.confirm;
 window.confirm = function(msg) {
   console.log('🔍 Confirm 메시지 감지:', msg); // 디버깅용
@@ -982,11 +982,17 @@ window.confirm = function(msg) {
               msg.includes('등록되었습니다') || 
               msg.includes('접수되었습니다') ||
               msg.includes('완료되었습니다'))) {
-    console.log('✅ 성공 메시지 확인! 탭을 닫습니다.'); // 디버깅용
+    console.log('✅ 성공 메시지 확인! 즉시 탭을 닫습니다.'); // 디버깅용
+    // 즉시 탭 닫기 시도
     setTimeout(() => {
-      try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-    }, 200);
-    return true; // '확인' 선택
+      try { 
+        window.close(); 
+      } catch (e) { 
+        console.log('탭 닫기 실패, about:blank로 이동');
+        window.location.href = 'about:blank'; 
+      }
+    }, 50); // 더 빠르게 실행
+    return true; // '확인' 선택하고 바로 리턴
   }
   return originalConfirm.call(this, msg);
 };
@@ -999,40 +1005,22 @@ window.alert = function(msg) {
               msg.includes('등록되었습니다') || 
               msg.includes('접수되었습니다') ||
               msg.includes('완료되었습니다'))) {
-    console.log('✅ Alert 성공 메시지 확인! 탭을 닫습니다.'); // 디버깅용
+    console.log('✅ Alert 성공 메시지 확인! 즉시 탭을 닫습니다.'); // 디버깅용
+    // 즉시 탭 닫기 시도
     setTimeout(() => {
-      try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-    }, 200);
+      try { 
+        window.close(); 
+      } catch (e) { 
+        console.log('탭 닫기 실패, about:blank로 이동');
+        window.location.href = 'about:blank'; 
+      }
+    }, 50); // 더 빠르게 실행
+    return; // alert는 리턴값이 없음
   }
   return originalAlert.call(this, msg);
 };
 
-// 추가: DOM 변화 감지로 팝업 확인
-const observer = new MutationObserver((mutations) => {
-  mutations.forEach((mutation) => {
-    if (mutation.type === 'childList') {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1 && node.textContent) {
-          const text = node.textContent;
-          if (text.includes('정상적으로 등록되었습니다') || 
-              text.includes('등록되었습니다') || 
-              text.includes('접수되었습니다') ||
-              text.includes('완료되었습니다')) {
-            console.log('✅ DOM에서 성공 메시지 발견! 탭을 닫습니다.'); // 디버깅용
-            setTimeout(() => {
-              try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-            }, 1000);
-          }
-        }
-      });
-    }
-  });
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true
-});
+// DOM 변화 감지는 제거 (너무 많은 감지로 인한 오동작 방지)
 
 // 페이지 로딩 완료 후 실행
 if (document.readyState === 'complete') {
