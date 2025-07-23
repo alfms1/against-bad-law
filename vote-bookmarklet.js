@@ -939,6 +939,32 @@ captchaField._smartCaptchaSet = true;
 }
 }
 
+// pal.assembly.go.kr에서만 실행
+if (currentDomain === 'pal.assembly.go.kr') {
+  // confirm 후킹: 특정 메시지면 자동 취소 + 탭 닫기
+  const originalConfirm = window.confirm;
+  window.confirm = function(msg) {
+    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
+      setTimeout(() => {
+        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+      }, 200);
+      return false; // '취소' 선택
+    }
+    return originalConfirm.call(this, msg);
+  };
+
+  // alert도 혹시 모르니 후킹
+  const originalAlert = window.alert;
+  window.alert = function(msg) {
+    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
+      setTimeout(() => {
+        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
+      }, 200);
+    }
+    return originalAlert.call(this, msg);
+  };
+}
+
 // 초기 성공 알림
 const notification = document.createElement('div');
 Object.assign(notification.style, {
@@ -974,54 +1000,6 @@ notification.innerHTML = `
 document.body.appendChild(notification);
 }
 
-// 성공 메시지 confirm 처리 (즉시 처리 버전)
-const originalConfirm = window.confirm;
-window.confirm = function(msg) {
-  console.log('🔍 Confirm 메시지 감지:', msg); // 디버깅용
-  if (msg && (msg.includes('정상적으로 등록되었습니다') || 
-              msg.includes('등록되었습니다') || 
-              msg.includes('접수되었습니다') ||
-              msg.includes('완료되었습니다'))) {
-    console.log('✅ 성공 메시지 확인! 즉시 탭을 닫습니다.'); // 디버깅용
-    // 즉시 탭 닫기 시도
-    setTimeout(() => {
-      try { 
-        window.close(); 
-      } catch (e) { 
-        console.log('탭 닫기 실패, about:blank로 이동');
-        window.location.href = 'about:blank'; 
-      }
-    }, 50); // 더 빠르게 실행
-    return true; // '확인' 선택하고 바로 리턴
-  }
-  return originalConfirm.call(this, msg);
-};
-
-// 추가: alert도 처리 (혹시 confirm이 아닌 alert일 경우)
-const originalAlert = window.alert;
-window.alert = function(msg) {
-  console.log('🔍 Alert 메시지 감지:', msg); // 디버깅용
-  if (msg && (msg.includes('정상적으로 등록되었습니다') || 
-              msg.includes('등록되었습니다') || 
-              msg.includes('접수되었습니다') ||
-              msg.includes('완료되었습니다'))) {
-    console.log('✅ Alert 성공 메시지 확인! 즉시 탭을 닫습니다.'); // 디버깅용
-    // 즉시 탭 닫기 시도
-    setTimeout(() => {
-      try { 
-        window.close(); 
-      } catch (e) { 
-        console.log('탭 닫기 실패, about:blank로 이동');
-        window.location.href = 'about:blank'; 
-      }
-    }, 50); // 더 빠르게 실행
-    return; // alert는 리턴값이 없음
-  }
-  return originalAlert.call(this, msg);
-};
-
-// DOM 변화 감지는 제거 (너무 많은 감지로 인한 오동작 방지)
-
 // 페이지 로딩 완료 후 실행
 if (document.readyState === 'complete') {
 executeAutoFill();
@@ -1032,7 +1010,7 @@ setTimeout(executeAutoFill, 2000);
 
 // console.log('✅ 국회 사이트 스마트 자동 입력 준비 완료');
 }
-//신규 
+
 // 기타 사이트
 else {
 // console.log('❓ 지원하지 않는 사이트:', currentDomain);
