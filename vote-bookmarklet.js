@@ -62,7 +62,7 @@ function showCaptchaErrorNotification(errorMsg) {
   }, 7000);
 }
 
-javascript:(async function() {
+javascript:(function() {
 const currentDomain = window.location.hostname;
 
 // VForKorea 사이트에서의 동작
@@ -72,7 +72,7 @@ if (currentDomain === 'vforkorea.com') {
 const existingPanel = document.querySelector('#vote-control-panel');
 if (existingPanel) existingPanel.remove();
 
-// 1. 초기 컨트롤 패널 생성
+// 1. 컨트롤 패널 생성
 const controlPanel = document.createElement('div');
 controlPanel.id = 'vote-control-panel';
 const isMobile = window.innerWidth <= 768;
@@ -94,7 +94,7 @@ fontFamily: 'Arial, sans-serif',
 fontSize: isMobile ? '16px' : '14px'
 });
 
-// 2. 초기 헤더 (마감일 선택)
+// 2. 헤더 - 드롭다운 포함
 const header = document.createElement('div');
 header.innerHTML = `
 <h3 style="margin: 0 0 15px 0; color: #333;">📝 법안 의견 등록</h3>
@@ -109,13 +109,13 @@ header.innerHTML = `
   border-radius: 6px;
   font-size: 14px;
   background: white;
+  margin-bottom: 10px;
 ">
 <option value="">마감일을 선택하세요</option>
 <option value="오늘 마감">오늘 마감</option>
 <option value="내일 마감">내일 마감</option>
 <option value="모레 마감">모레 마감</option>
 </select>
-</div>
 <button id="load-bills" style="
   width: 100%;
   padding: 12px;
@@ -126,10 +126,10 @@ header.innerHTML = `
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  margin-bottom: 10px;
 " disabled>
 🔍 해당 마감일 법안 불러오기
 </button>
+</div>
 <button id="close-panel" style="
   width: 100%;
   padding: 8px;
@@ -146,12 +146,39 @@ header.innerHTML = `
 controlPanel.appendChild(header);
 document.body.appendChild(controlPanel);
 
-// 3. 전역 변수
+// 3. 변수 선언
 let bills = [];
-let currentDeadline = '';
 
-// 4. 모든 법안 로딩 함수
-async function loadAllBills(deadline) {
+// 4. 이벤트 리스너
+// 드롭다운 변경시
+document.getElementById('deadline-select').onchange = function() {
+  const loadBtn = document.getElementById('load-bills');
+  if (this.value) {
+    loadBtn.disabled = false;
+    loadBtn.style.background = '#2196F3';
+    loadBtn.innerHTML = `🔍 "${this.value}" 법안 불러오기`;
+  } else {
+    loadBtn.disabled = true;
+    loadBtn.style.background = '#ccc';
+    loadBtn.innerHTML = '🔍 해당 마감일 법안 불러오기';
+  }
+};
+
+// 패널 닫기
+document.getElementById('close-panel').onclick = () => {
+  controlPanel.remove();
+};
+
+// 법안 로드 버튼
+document.getElementById('load-bills').onclick = async function() {
+  const selectedDeadline = document.getElementById('deadline-select').value;
+  if (!selectedDeadline) return;
+  
+  // 로딩 상태로 변경
+  this.disabled = true;
+  this.innerHTML = '🔄 법안 로딩 중...';
+  this.style.background = '#ff9800';
+  
   // 로딩 알림 표시
   const loadingNotification = document.createElement('div');
   Object.assign(loadingNotification.style, {
@@ -167,42 +194,49 @@ async function loadAllBills(deadline) {
     boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
     fontSize: '14px'
   });
-  loadingNotification.innerHTML = `🔄 "${deadline}" 법안 검색 중...`;
+  loadingNotification.innerHTML = `🔄 "${selectedDeadline}" 법안 검색 중...`;
   document.body.appendChild(loadingNotification);
 
-  let previousCount = 0;
-  let currentCount = 0;
-  let noChangeCount = 0;
-  
-  while (noChangeCount < 3) {
-    // 현재 법안 수 확인
-    currentCount = document.querySelectorAll('tr[data-idx]').length;
+  // 모든 법안 로딩 함수
+  async function loadAllBills() {
+    let previousCount = 0;
+    let currentCount = 0;
+    let noChangeCount = 0;
     
-    // 페이지 끝까지 스크롤
-    window.scrollTo(0, document.body.scrollHeight);
-    
-    // 잠시 대기 (새 콘텐츠 로딩 시간)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // 변화가 없으면 카운트 증가
-    if (currentCount === previousCount) {
-      noChangeCount++;
-    } else {
-      noChangeCount = 0;
+    while (noChangeCount < 3) {
+      // 현재 법안 수 확인
+      currentCount = document.querySelectorAll('tr[data-idx]').length;
+      
+      // 페이지 끝까지 스크롤
+      window.scrollTo(0, document.body.scrollHeight);
+      
+      // 잠시 대기 (새 콘텐츠 로딩 시간)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 변화가 없으면 카운트 증가
+      if (currentCount === previousCount) {
+        noChangeCount++;
+      } else {
+        noChangeCount = 0;
+      }
+      
+      previousCount = currentCount;
+      
+      // 로딩 상태 업데이트
+      loadingNotification.innerHTML = `🔄 전체 법안 로딩 중... (${currentCount}개 발견)`;
     }
     
-    previousCount = currentCount;
-    
-    // 로딩 상태 업데이트
-    loadingNotification.innerHTML = `🔄 전체 법안 로딩 중... (${currentCount}개 발견)`;
+    return currentCount;
   }
-  
-  loadingNotification.innerHTML = `🔍 "${deadline}" 법안 검색 중...`;
+
+  // 모든 법안 로딩 후 선택된 마감일 법안 찾기
+  const totalLoaded = await loadAllBills();
+  loadingNotification.innerHTML = `🔍 "${selectedDeadline}" 법안 검색 중...`;
 
   // 선택된 마감일 법안들 찾기
   const targetRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
     const redSpan = tr.querySelector('td span.red');
-    return redSpan && redSpan.textContent.trim() === deadline;
+    return redSpan && redSpan.textContent.trim() === selectedDeadline;
   });
 
   // 로딩 알림 제거
@@ -212,50 +246,34 @@ async function loadAllBills(deadline) {
     }
   }, 1000);
 
-  return { targetRows, totalLoaded: currentCount };
-}
+  if (!targetRows.length) {
+    alert(`전체 ${totalLoaded}개 법안 중 "${selectedDeadline}" 법안이 없습니다.`);
+    // 버튼 상태 원복
+    this.disabled = false;
+    this.innerHTML = `🔍 "${selectedDeadline}" 법안 불러오기`;
+    this.style.background = '#2196F3';
+    return;
+  }
 
-// 5. UI 업데이트 함수
+  // 성공 - UI 업데이트
+  updateUIWithBills(targetRows, selectedDeadline);
+};
+
+// UI 업데이트 함수
 function updateUIWithBills(targetRows, deadline) {
-  currentDeadline = deadline;
+  // 헤더 업데이트하지 않고 법안 리스트만 추가
   
-  // 헤더 업데이트 - 드롭다운 유지
-  const header = controlPanel.querySelector('div');
-  header.innerHTML = `
-  <h3 style="margin: 0 0 15px 0; color: #333;">📝 법안 의견 등록</h3>
-  <div style="margin-bottom: 15px;">
-  <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">
-  마감일 선택:
-  </label>
-  <select id="deadline-select" style="
-    width: 100%;
-    padding: 8px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    background: white;
-    margin-bottom: 8px;
-  ">
-  <option value="">마감일을 선택하세요</option>
-  <option value="오늘 마감" ${deadline === '오늘 마감' ? 'selected' : ''}>오늘 마감</option>
-  <option value="내일 마감" ${deadline === '내일 마감' ? 'selected' : ''}>내일 마감</option>
-  <option value="모레 마감" ${deadline === '모레 마감' ? 'selected' : ''}>모레 마감</option>
-  </select>
-  <button id="load-bills" style="
-    width: 100%;
-    padding: 8px;
-    background: #2196F3;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 15px;
-  ">
-  🔍 다른 마감일 법안 불러오기
-  </button>
-  </div>
+  // 기존 법안 섹션과 버튼들 제거
+  const existingBillsSection = controlPanel.querySelector('.bills-section');
+  if (existingBillsSection) existingBillsSection.remove();
+  
+  const existingActions = controlPanel.querySelector('.action-buttons');
+  if (existingActions) existingActions.remove();
+
+  // 법안 섹션 생성
+  const billsSection = document.createElement('div');
+  billsSection.className = 'bills-section';
+  billsSection.innerHTML = `
   <div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #4caf50;">
   <h4 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 16px;">
   📋 ${deadline} 법안 (${targetRows.length}건)
@@ -267,13 +285,7 @@ function updateUIWithBills(targetRows, deadline) {
   </div>
   </div>
   `;
-
-  // 기존 법안 리스트 제거
-  const existingList = controlPanel.querySelector('.bills-list');
-  if (existingList) existingList.remove();
-  
-  const existingActions = controlPanel.querySelector('.action-buttons');
-  if (existingActions) existingActions.remove();
+  controlPanel.appendChild(billsSection);
 
   // 법안별 컨트롤 생성
   const billsList = document.createElement('div');
@@ -381,18 +393,6 @@ function updateUIWithBills(targetRows, deadline) {
   ">
   🚀 의견 등록 시작
   </button>
-  <button id="close-panel-final" style="
-    width: 100%;
-    padding: 8px;
-    background: #666;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-  ">
-  패널 닫기
-  </button>
   <div style="
     margin-top: 8px;
     font-size: 11px;
@@ -405,68 +405,12 @@ function updateUIWithBills(targetRows, deadline) {
   `;
   controlPanel.appendChild(actionButtons);
 
-  // 이벤트 리스너들 재등록
-  setupEventListeners();
+  // 새로운 이벤트 리스너들 등록
+  setupBillsEventListeners();
 }
 
-// 6. 이벤트 리스너 설정 함수
-function setupEventListeners() {
-  // 드롭다운 변경시
-  const deadlineSelect = document.getElementById('deadline-select');
-  if (deadlineSelect) {
-    deadlineSelect.onchange = function() {
-      const loadBtn = document.getElementById('load-bills');
-      if (this.value) {
-        loadBtn.disabled = false;
-        loadBtn.style.background = '#2196F3';
-        if (this.value === currentDeadline) {
-          loadBtn.innerHTML = `🔄 "${this.value}" 법안 새로고침`;
-        } else {
-          loadBtn.innerHTML = `🔍 "${this.value}" 법안 불러오기`;
-        }
-      } else {
-        loadBtn.disabled = true;
-        loadBtn.style.background = '#ccc';
-        loadBtn.innerHTML = '🔍 해당 마감일 법안 불러오기';
-      }
-    };
-  }
-
-  // 법안 로드 버튼
-  const loadBillsBtn = document.getElementById('load-bills');
-  if (loadBillsBtn) {
-    loadBillsBtn.onclick = async function() {
-      const selectedDeadline = document.getElementById('deadline-select').value;
-      if (!selectedDeadline) return;
-      
-      // 로딩 상태로 변경
-      this.disabled = true;
-      this.innerHTML = '🔄 법안 로딩 중...';
-      this.style.background = '#ff9800';
-      
-      try {
-        const { targetRows, totalLoaded } = await loadAllBills(selectedDeadline);
-
-        if (!targetRows.length) {
-          alert(`전체 ${totalLoaded}개 법안 중 "${selectedDeadline}" 법안이 없습니다.`);
-          // 버튼 상태 원복
-          this.disabled = false;
-          this.innerHTML = `🔍 "${selectedDeadline}" 법안 불러오기`;
-          this.style.background = '#2196F3';
-          return;
-        }
-
-        // 성공 - UI 업데이트
-        updateUIWithBills(targetRows, selectedDeadline);
-      } catch (error) {
-        alert('법안 로딩 중 오류가 발생했습니다.');
-        this.disabled = false;
-        this.innerHTML = `🔍 "${selectedDeadline}" 법안 불러오기`;
-        this.style.background = '#2196F3';
-      }
-    };
-  }
-
+// 법안 이벤트 리스너 설정
+function setupBillsEventListeners() {
   // 개별 투표 버튼
   controlPanel.addEventListener('click', (e) => {
     if (e.target.classList.contains('vote-btn')) {
@@ -547,16 +491,6 @@ function setupEventListeners() {
         });
       });
     };
-  }
-
-  // 패널 닫기
-  const closePanel = document.getElementById('close-panel');
-  const closeFinal = document.getElementById('close-panel-final');
-  if (closePanel) {
-    closePanel.onclick = () => controlPanel.remove();
-  }
-  if (closeFinal) {
-    closeFinal.onclick = () => controlPanel.remove();
   }
 
   // 의견 등록 시작
@@ -846,9 +780,6 @@ function setupEventListeners() {
     };
   }
 }
-
-// 7. 초기 이벤트 리스너 등록
-setupEventListeners();
 }
 
 // 국회 의견 등록 사이트에서의 동작
