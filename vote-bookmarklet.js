@@ -72,7 +72,7 @@ if (currentDomain === 'vforkorea.com') {
 const existingPanel = document.querySelector('#vote-control-panel');
 if (existingPanel) existingPanel.remove();
 
-// 1. 초기 로딩 알림
+// 로딩 알림 표시
 const loadingNotification = document.createElement('div');
 Object.assign(loadingNotification.style, {
   position: 'fixed',
@@ -87,11 +87,11 @@ Object.assign(loadingNotification.style, {
   boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
   fontSize: '14px'
 });
-loadingNotification.innerHTML = '🔄 모든 법안 스캔 중...';
+loadingNotification.innerHTML = '🔄 모든 법안 로딩 중...';
 document.body.appendChild(loadingNotification);
 
-// 2. 모든 법안 로딩 및 마감일 수집
-async function loadAllBillsAndGetDeadlines() {
+// 1. 모든 법안 로딩 함수
+async function loadAllBills() {
   let previousCount = 0;
   let currentCount = 0;
   let noChangeCount = 0;
@@ -119,40 +119,52 @@ async function loadAllBillsAndGetDeadlines() {
     loadingNotification.innerHTML = `🔄 법안 로딩 중... (${currentCount}개 발견)`;
   }
   
-  // 마감일 수집
-  loadingNotification.innerHTML = '📋 마감일 정보 수집 중...';
-  
-  const deadlineSet = new Set();
-  const allRows = document.querySelectorAll('tr[data-idx]');
-  
-  allRows.forEach(tr => {
-    const redSpan = tr.querySelector('td span.red');
-    if (redSpan && redSpan.textContent.trim()) {
-      deadlineSet.add(redSpan.textContent.trim());
-    }
-  });
-  
-  const deadlines = Array.from(deadlineSet).sort((a, b) => {
-    // "오늘 마감"을 맨 앞으로
-    if (a.includes('오늘')) return -1;
-    if (b.includes('오늘')) return 1;
-    if (a.includes('내일')) return -1;
-    if (b.includes('내일')) return 1;
-    return a.localeCompare(b);
-  });
-  
-  return { deadlines, totalCount: currentCount };
+  return currentCount;
 }
 
-// 모든 법안 로딩 및 마감일 수집 실행
-const { deadlines, totalCount } = await loadAllBillsAndGetDeadlines();
+// 모든 법안 로딩 후 분류
+const totalLoaded = await loadAllBills();
+loadingNotification.innerHTML = `✅ 총 ${totalLoaded}개 법안 로딩 완료!`;
+
+// 2. 모든 법안 데이터 수집 및 분류
+const allBills = [];
+const todayBills = [];
+const otherBills = [];
+
+document.querySelectorAll('tr[data-idx]').forEach(tr => {
+  const titleElement = tr.querySelector('.content .t');
+  const voteLink = tr.querySelector('a[href*="forInsert.do"]');
+  const redSpan = tr.querySelector('td span.red');
+  
+  if (!titleElement || !voteLink) return;
+  
+  const title = titleElement.textContent.trim();
+  const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
+  
+  const billData = {
+    title: title,
+    link: voteLink.href,
+    element: tr,
+    isToday: isToday
+  };
+  
+  allBills.push(billData);
+  
+  if (isToday) {
+    todayBills.push(billData);
+  } else {
+    otherBills.push(billData);
+  }
+});
 
 // 로딩 알림 제거
-if (document.body.contains(loadingNotification)) {
-  document.body.removeChild(loadingNotification);
-}
+setTimeout(() => {
+  if (document.body.contains(loadingNotification)) {
+    document.body.removeChild(loadingNotification);
+  }
+}, 2000);
 
-// 3. 컨트롤 패널 생성
+// 3. 컨트롤 패널 생성 (모바일 최적화)
 const controlPanel = document.createElement('div');
 controlPanel.id = 'vote-control-panel';
 const isMobile = window.innerWidth <= 768;
@@ -161,7 +173,7 @@ position: 'fixed',
 top: isMobile ? '10px' : '20px',
 right: isMobile ? '10px' : '20px',
 left: isMobile ? '10px' : 'auto',
-width: isMobile ? 'auto' : '350px',
+width: isMobile ? 'auto' : '400px',
 maxHeight: '80vh',
 overflowY: 'auto',
 background: 'white',
@@ -174,40 +186,60 @@ fontFamily: 'Arial, sans-serif',
 fontSize: isMobile ? '16px' : '14px'
 });
 
-// 4. 헤더 - 동적 드롭다운
+// 4. 헤더 및 필터 드롭다운
 const header = document.createElement('div');
 header.innerHTML = `
-<h3 style="margin: 0 0 15px 0; color: #333;">📝 법안 의견 등록</h3>
+<h3 style="margin: 0 0 15px 0; color: #333;">📝 법안 선택 시스템</h3>
 <div style="margin-bottom: 15px;">
-<label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">
-마감일 선택: (총 ${totalCount}개 법안)
-</label>
-<select id="deadline-select" style="
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #ddd;
-  border-radius: 6px;
+<label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">법안 필터:</label>
+<select id="bill-filter" style="
+  width: 100%; 
+  padding: 8px; 
+  border: 2px solid #ddd; 
+  border-radius: 6px; 
   font-size: 14px;
-  background: white;
   margin-bottom: 10px;
 ">
-<option value="">마감일을 선택하세요</option>
-${deadlines.map(deadline => `<option value="${deadline}">${deadline}</option>`).join('')}
+  <option value="today">오늘 마감 (${todayBills.length}개)</option>
+  <option value="other">기타 법안 (${otherBills.length}개)</option>
+  <option value="all">전체 법안 (${allBills.length}개)</option>
 </select>
-<button id="load-bills" style="
+</div>
+<div style="margin-bottom: 15px;">
+<button id="select-all-agree" style="padding: 5px 10px; margin-right: 5px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 찬성</button>
+<button id="select-all-disagree" style="padding: 5px 10px; margin-right: 5px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">전체 반대</button>
+<button id="clear-all" style="padding: 5px 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">초기화</button>
+</div>
+`;
+controlPanel.appendChild(header);
+
+// 5. 법안 목록 컨테이너
+const billsList = document.createElement('div');
+billsList.id = 'bills-list';
+controlPanel.appendChild(billsList);
+
+// 6. 실행 버튼들
+const actionButtons = document.createElement('div');
+actionButtons.innerHTML = `
+<div style="
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+">
+<button id="start-opinion-registration" style="
   width: 100%;
   padding: 12px;
-  background: #ccc;
+  background: #1976d2;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-" disabled>
-🔍 해당 마감일 법안 불러오기
+  margin-bottom: 8px;
+">
+🚀 의견 등록 시작
 </button>
-</div>
 <button id="close-panel" style="
   width: 100%;
   padding: 8px;
@@ -220,108 +252,43 @@ ${deadlines.map(deadline => `<option value="${deadline}">${deadline}</option>`).
 ">
 패널 닫기
 </button>
+<div style="
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+">
+✨ 캡차 5자리 입력시 성공하면 자동으로 탭이 닫힙니다!
+</div>
+</div>
 `;
-controlPanel.appendChild(header);
+controlPanel.appendChild(actionButtons);
 document.body.appendChild(controlPanel);
 
-// 5. 변수 선언
-let bills = [];
+// 7. 현재 표시된 법안들과 상태 관리
+let currentBills = [];
+let billStates = {}; // 법안별 투표 상태 저장
 
-// 6. 이벤트 리스너
-// 드롭다운 변경시
-document.getElementById('deadline-select').onchange = function() {
-  const loadBtn = document.getElementById('load-bills');
-  if (this.value) {
-    // 해당 마감일 법안 개수 확인
-    const targetRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
-      const redSpan = tr.querySelector('td span.red');
-      return redSpan && redSpan.textContent.trim() === this.value;
-    });
-    
-    loadBtn.disabled = false;
-    loadBtn.style.background = '#2196F3';
-    loadBtn.innerHTML = `🔍 "${this.value}" 법안 ${targetRows.length}개 불러오기`;
-  } else {
-    loadBtn.disabled = true;
-    loadBtn.style.background = '#ccc';
-    loadBtn.innerHTML = '🔍 해당 마감일 법안 불러오기';
-  }
-};
-
-// 패널 닫기
-document.getElementById('close-panel').onclick = () => {
-  controlPanel.remove();
-};
-
-// 법안 로드 버튼
-document.getElementById('load-bills').onclick = function() {
-  const selectedDeadline = document.getElementById('deadline-select').value;
-  if (!selectedDeadline) return;
+// 8. 법안 목록 렌더링 함수
+function renderBills(billsToShow) {
+  currentBills = billsToShow;
+  billsList.innerHTML = '';
   
-  // 선택된 마감일 법안들 찾기 (이미 로딩된 상태)
-  const targetRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
-    const redSpan = tr.querySelector('td span.red');
-    return redSpan && redSpan.textContent.trim() === selectedDeadline;
-  });
-
-  if (!targetRows.length) {
-    alert(`"${selectedDeadline}" 법안을 찾을 수 없습니다.`);
+  if (!billsToShow.length) {
+    billsList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">해당하는 법안이 없습니다.</div>';
     return;
   }
-
-  // UI 업데이트
-  updateUIWithBills(targetRows, selectedDeadline);
-};
-
-// UI 업데이트 함수
-function updateUIWithBills(targetRows, deadline) {
-  // 기존 법안 섹션과 버튼들 제거
-  const existingBillsSection = controlPanel.querySelector('.bills-section');
-  if (existingBillsSection) existingBillsSection.remove();
   
-  const existingActions = controlPanel.querySelector('.action-buttons');
-  if (existingActions) existingActions.remove();
-
-  // 법안 섹션 생성
-  const billsSection = document.createElement('div');
-  billsSection.className = 'bills-section';
-  billsSection.innerHTML = `
-  <div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #4caf50;">
-  <h4 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 16px;">
-  📋 ${deadline} 법안 (${targetRows.length}건)
-  </h4>
-  <div style="margin-bottom: 0;">
-  <button id="select-all-agree" style="padding: 5px 10px; margin-right: 5px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">전체 찬성</button>
-  <button id="select-all-disagree" style="padding: 5px 10px; margin-right: 5px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">전체 반대</button>
-  <button id="clear-all" style="padding: 5px 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">초기화</button>
-  </div>
-  </div>
-  `;
-  controlPanel.appendChild(billsSection);
-
-  // 법안별 컨트롤 생성
-  const billsList = document.createElement('div');
-  billsList.className = 'bills-list';
-  bills = [];
-
-  targetRows.forEach((tr, index) => {
-    const titleElement = tr.querySelector('.content .t');
-    const voteLink = tr.querySelector('a[href*="forInsert.do"]');
-
-    if (!titleElement || !voteLink) {
-      return;
-    }
-
-    const title = titleElement.textContent.trim();
-    const shortTitle = title.length > 50 ? title.substring(0, 50) + '...' : title;
-
+  billsToShow.forEach((bill, index) => {
+    const shortTitle = bill.title.length > 50 ? bill.title.substring(0, 50) + '...' : bill.title;
+    
     const billItem = document.createElement('div');
     Object.assign(billItem.style, {
       marginBottom: '12px',
       padding: '10px',
       border: '1px solid #ddd',
       borderRadius: '6px',
-      background: '#f9f9f9'
+      background: bill.isToday ? '#fff3e0' : '#f9f9f9'
     });
 
     billItem.innerHTML = `
@@ -331,14 +298,14 @@ function updateUIWithBills(targetRows, deadline) {
       font-size: 13px;
       line-height: 1.3;
     ">
-    ${shortTitle}
+    ${bill.isToday ? '🔥 ' : ''}${shortTitle}
     </div>
     <div style="
       display: flex;
       gap: 8px;
       align-items: center;
     ">
-    <button class="vote-btn agree" data-index="${index}" style="
+    <button class="vote-btn agree" data-bill-id="${bill.link}" style="
       padding: 4px 12px;
       background: #2e7d32;
       color: white;
@@ -349,7 +316,7 @@ function updateUIWithBills(targetRows, deadline) {
     ">
     찬성
     </button>
-    <button class="vote-btn disagree" data-index="${index}" style="
+    <button class="vote-btn disagree" data-bill-id="${bill.link}" style="
       padding: 4px 12px;
       background: #c62828;
       color: white;
@@ -360,438 +327,385 @@ function updateUIWithBills(targetRows, deadline) {
     ">
     반대
     </button>
-    <span class="vote-status" data-index="${index}" style="
+    <span class="vote-status" data-bill-id="${bill.link}" style="
       margin-left: 8px;
       font-weight: bold;
       font-size: 12px;
     ">
-    미선택
+    ${billStates[bill.link] ? (billStates[bill.link] === 'agree' ? '찬성' : '반대') : '미선택'}
     </span>
     </div>
     `;
 
-    billsList.appendChild(billItem);
-
-    bills.push({
-      title: title,
-      link: voteLink.href,
-      vote: null,
-      element: billItem
-    });
-  });
-
-  controlPanel.appendChild(billsList);
-
-  // 실행 버튼들
-  const actionButtons = document.createElement('div');
-  actionButtons.className = 'action-buttons';
-  actionButtons.innerHTML = `
-  <div style="
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #ddd;
-  ">
-  <button id="start-opinion-registration" style="
-    width: 100%;
-    padding: 12px;
-    background: #1976d2;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 8px;
-  ">
-  🚀 의견 등록 시작
-  </button>
-  <div style="
-    margin-top: 8px;
-    font-size: 11px;
-    color: #666;
-    text-align: center;
-  ">
-  ✨ 캡차 5자리 입력시 성공하면 자동으로 탭이 닫힙니다!
-  </div>
-  </div>
-  `;
-  controlPanel.appendChild(actionButtons);
-
-  // 새로운 이벤트 리스너들 등록
-  setupBillsEventListeners();
-}
-
-// 법안 이벤트 리스너 설정
-function setupBillsEventListeners() {
-  // 개별 투표 버튼
-  controlPanel.addEventListener('click', (e) => {
-    if (e.target.classList.contains('vote-btn')) {
-      const index = parseInt(e.target.dataset.index);
-      const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
-
-      bills[index].vote = voteType;
-
-      const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
-      statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
-      statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
-
-      const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
-      const buttons = billDiv.querySelectorAll('.vote-btn');
+    // 기존 상태 복원
+    if (billStates[bill.link]) {
+      const buttons = billItem.querySelectorAll('.vote-btn');
       buttons.forEach(btn => {
-        btn.style.opacity = btn === e.target ? '1' : '0.5';
-      });
-    }
-  });
-
-  // 전체 선택 버튼들
-  const selectAllAgree = document.getElementById('select-all-agree');
-  if (selectAllAgree) {
-    selectAllAgree.onclick = () => {
-      bills.forEach((bill, index) => {
-        bill.vote = 'agree';
-        const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
-        statusSpan.textContent = '찬성';
-        statusSpan.style.color = '#2e7d32';
-
-        const billDiv = bill.element;
-        const buttons = billDiv.querySelectorAll('.vote-btn');
-        buttons.forEach(btn => {
-          btn.style.opacity = btn.classList.contains('agree') ? '1' : '0.5';
-        });
-      });
-    };
-  }
-
-  const selectAllDisagree = document.getElementById('select-all-disagree');
-  if (selectAllDisagree) {
-    selectAllDisagree.onclick = () => {
-      bills.forEach((bill, index) => {
-        bill.vote = 'disagree';
-        const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
-        statusSpan.textContent = '반대';
-        statusSpan.style.color = '#c62828';
-
-        const billDiv = bill.element;
-        const buttons = billDiv.querySelectorAll('.vote-btn');
-        buttons.forEach(btn => {
-          btn.style.opacity = btn.classList.contains('disagree') ? '1' : '0.5';
-        });
-      });
-    };
-  }
-
-  const clearAll = document.getElementById('clear-all');
-  if (clearAll) {
-    clearAll.onclick = () => {
-      bills.forEach((bill, index) => {
-        bill.vote = null;
-        const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
-        statusSpan.textContent = '미선택';
-        statusSpan.style.color = '#666';
-
-        const billDiv = bill.element;
-        const buttons = billDiv.querySelectorAll('.vote-btn');
-        buttons.forEach(btn => {
+        if ((billStates[bill.link] === 'agree' && btn.classList.contains('agree')) ||
+            (billStates[bill.link] === 'disagree' && btn.classList.contains('disagree'))) {
           btn.style.opacity = '1';
-          if (btn.classList.contains('agree')) {
-            btn.style.background = '#2e7d32';
-            btn.style.color = 'white';
-          } else if (btn.classList.contains('disagree')) {
-            btn.style.background = '#c62828';
-            btn.style.color = 'white';
-          }
-        });
+        } else {
+          btn.style.opacity = '0.5';
+        }
       });
-    };
-  }
+      
+      const statusSpan = billItem.querySelector('.vote-status');
+      statusSpan.style.color = billStates[bill.link] === 'agree' ? '#2e7d32' : '#c62828';
+    }
 
-  // 의견 등록 시작
-  const startBtn = document.getElementById('start-opinion-registration');
-  if (startBtn) {
-    startBtn.onclick = () => {
-      const selectedBills = bills.filter(bill => bill.vote !== null);
-
-      if (!selectedBills.length) {
-        alert('선택된 법안이 없습니다.');
-        return;
-      }
-
-      // 찬성과 반대 법안 분리
-      const agreeBills = selectedBills.filter(bill => bill.vote === 'agree');
-      const disagreeBills = selectedBills.filter(bill => bill.vote === 'disagree');
-
-      // 입력 모달 생성
-      const modalOverlay = document.createElement('div');
-      Object.assign(modalOverlay.style, {
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        background: 'rgba(0,0,0,0.7)',
-        zIndex: '20000',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-      });
-
-      const modal = document.createElement('div');
-      Object.assign(modal.style, {
-        background: 'white',
-        padding: `${isMobile ? '20px' : '30px'}`,
-        borderRadius: '12px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-        maxWidth: `${isMobile ? '95%' : '500px'}`,
-        width: '90%',
-        fontFamily: 'Arial, sans-serif',
-        maxHeight: '80vh',
-        overflowY: 'auto'
-      });
-
-      modal.innerHTML = `
-      <h3 style="
-        margin: 0 0 20px 0;
-        color: #333;
-        text-align: center;
-      ">
-      📝 의견 입력
-      </h3>
-      ${agreeBills.length > 0 && disagreeBills.length > 0 ? 
-      `<div style="
-        background: #e3f2fd;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 15px;
-        font-size: 14px;
-      ">
-        ℹ️ 찬성 ${agreeBills.length}개, 반대 ${disagreeBills.length}개 법안이 선택되었습니다.
-      </div>` : ''
-      }
-
-      ${agreeBills.length > 0 ? `
-      <div style="
-        background: #e8f5e8;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border-left: 4px solid #4caf50;
-      ">
-      <h4 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 16px;">
-      ✅ 찬성 법안 (${agreeBills.length}개)
-      </h4>
-      <div style="margin-bottom: 10px;">
-      <label style="
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        color: #555;
-      ">
-      제목:
-      </label>
-      <input type="text" id="modal-agree-title" 
-             style="
-               width: 100%;
-               padding: 8px;
-               border: 2px solid #ddd;
-               border-radius: 6px;
-               font-size: 14px;
-             "
-             value="이 법안에 찬성합니다">
-      </div>
-      <div>
-      <label style="
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        color: #555;
-      ">
-      내용:
-      </label>
-      <textarea id="modal-agree-content" 
-                style="
-                  width: 100%;
-                  height: 80px;
-                  padding: 8px;
-                  border: 2px solid #ddd;
-                  border-radius: 6px;
-                  font-size: 14px;
-                  resize: vertical;
-                ">국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.</textarea>
-      </div>
-      </div>
-      ` : ''}
-
-      ${disagreeBills.length > 0 ? `
-      <div style="
-        background: #ffebee;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        border-left: 4px solid #f44336;
-      ">
-      <h4 style="margin: 0 0 10px 0; color: #c62828; font-size: 16px;">
-      ❌ 반대 법안 (${disagreeBills.length}개)
-      </h4>
-      <div style="margin-bottom: 10px;">
-      <label style="
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        color: #555;
-      ">
-      제목:
-      </label>
-      <input type="text" id="modal-disagree-title" 
-             style="
-               width: 100%;
-               padding: 8px;
-               border: 2px solid #ddd;
-               border-radius: 6px;
-               font-size: 14px;
-             "
-             value="이 법안을 반대합니다">
-      </div>
-      <div>
-      <label style="
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-        color: #555;
-      ">
-      내용:
-      </label>
-      <textarea id="modal-disagree-content" 
-                style="
-                  width: 100%;
-                  height: 80px;
-                  padding: 8px;
-                  border: 2px solid #ddd;
-                  border-radius: 6px;
-                  font-size: 14px;
-                  resize: vertical;
-                ">국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.</textarea>
-      </div>
-      </div>
-      ` : ''}
-
-      <div style="
-        background: #fff3e0;
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 15px;
-        font-size: 13px;
-        border-left: 4px solid #ff9800;
-      ">
-      <strong>✨ 스마트 캡차 처리:</strong><br>
-      • 캡차 5자리 입력 후 성공하면 → 탭 자동 닫기<br>
-      • 실패하면 → 탭 유지하여 다시 입력 가능
-      </div>
-      <div style="text-align: center;">
-      <button id="modal-ok" style="
-        background: #4caf50;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 6px;
-        margin-right: 10px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: bold;
-      ">
-      확인 (${selectedBills.length}개 법안)
-      </button>
-      <button id="modal-cancel" style="
-        background: #f44336;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: bold;
-      ">
-      취소
-      </button>
-      </div>
-      `;
-
-      modalOverlay.appendChild(modal);
-      document.body.appendChild(modalOverlay);
-
-      // 확인 버튼
-      document.getElementById('modal-ok').onclick = () => {
-        const agreeTitleInput = document.getElementById('modal-agree-title')?.value.trim() || '';
-        const agreeContentInput = document.getElementById('modal-agree-content')?.value.trim() || '';
-        const disagreeTitleInput = document.getElementById('modal-disagree-title')?.value.trim() || '';
-        const disagreeContentInput = document.getElementById('modal-disagree-content')?.value.trim() || '';
-
-        // 선택된 법안이 있는데 해당 메시지가 비어있으면 경고
-        if (agreeBills.length > 0 && (!agreeTitleInput || !agreeContentInput)) {
-          alert('찬성 법안의 제목과 내용을 모두 입력해주세요.');
-          return;
-        }
-        
-        if (disagreeBills.length > 0 && (!disagreeTitleInput || !disagreeContentInput)) {
-          alert('반대 법안의 제목과 내용을 모두 입력해주세요.');
-          return;
-        }
-
-        modalOverlay.remove();
-
-        // 찬성 법안들 처리
-        if (agreeBills.length > 0) {
-          localStorage.setItem('autoFillData_agree', JSON.stringify({
-            title: agreeTitleInput,
-            content: agreeContentInput,
-            timestamp: Date.now()
-          }));
-
-          agreeBills.forEach((bill) => {
-            const url = new URL(bill.link);
-            url.searchParams.set('autoTitle', encodeURIComponent(agreeTitleInput));
-            url.searchParams.set('autoContent', encodeURIComponent(agreeContentInput));
-            url.searchParams.set('voteType', 'agree');
-            
-            const link = document.createElement('a');
-            link.href = url.toString();
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          });
-        }
-
-        // 반대 법안들 처리
-        if (disagreeBills.length > 0) {
-          localStorage.setItem('autoFillData_disagree', JSON.stringify({
-            title: disagreeTitleInput,
-            content: disagreeContentInput,
-            timestamp: Date.now()
-          }));
-
-          disagreeBills.forEach((bill) => {
-            const url = new URL(bill.link);
-            url.searchParams.set('autoTitle', encodeURIComponent(disagreeTitleInput));
-            url.searchParams.set('autoContent', encodeURIComponent(disagreeContentInput));
-            url.searchParams.set('voteType', 'disagree');
-            
-            const link = document.createElement('a');
-            link.href = url.toString();
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          });
-        }
-      };
-
-      // 취소 버튼
-      document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
-    };
-  }
+    billsList.appendChild(billItem);
+  });
 }
+
+// 9. 초기 렌더링 (오늘 마감 법안 먼저 표시)
+renderBills(todayBills);
+
+// 10. 이벤트 리스너들
+
+// 필터 변경
+document.getElementById('bill-filter').addEventListener('change', (e) => {
+  const filterValue = e.target.value;
+  if (filterValue === 'today') {
+    renderBills(todayBills);
+  } else if (filterValue === 'other') {
+    renderBills(otherBills);
+  } else {
+    renderBills(allBills);
+  }
+});
+
+// 개별 투표 버튼
+controlPanel.addEventListener('click', (e) => {
+if (e.target.classList.contains('vote-btn')) {
+const billId = e.target.dataset.billId;
+const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
+
+// 상태 저장
+billStates[billId] = voteType;
+
+const statusSpan = controlPanel.querySelector(`span[data-bill-id="${billId}"]`);
+statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
+statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
+
+const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
+const buttons = billDiv.querySelectorAll('.vote-btn');
+buttons.forEach(btn => {
+btn.style.opacity = btn === e.target ? '1' : '0.5';
+});
+}
+});
+
+// 전체 선택 버튼들
+document.getElementById('select-all-agree').onclick = () => {
+currentBills.forEach((bill) => {
+billStates[bill.link] = 'agree';
+});
+renderBills(currentBills);
+};
+
+document.getElementById('select-all-disagree').onclick = () => {
+currentBills.forEach((bill) => {
+billStates[bill.link] = 'disagree';
+});
+renderBills(currentBills);
+};
+
+document.getElementById('clear-all').onclick = () => {
+currentBills.forEach((bill) => {
+delete billStates[bill.link];
+});
+renderBills(currentBills);
+};
+
+// 패널 닫기
+document.getElementById('close-panel').onclick = () => {
+controlPanel.remove();
+};
+
+// 의견 등록 시작
+document.getElementById('start-opinion-registration').onclick = () => {
+// 선택된 법안들만 필터링
+const selectedBills = allBills.filter(bill => billStates[bill.link]);
+
+if (!selectedBills.length) {
+alert('선택된 법안이 없습니다.');
+return;
+}
+
+// 찬성과 반대 법안 분리
+const agreeBills = selectedBills.filter(bill => billStates[bill.link] === 'agree');
+const disagreeBills = selectedBills.filter(bill => billStates[bill.link] === 'disagree');
+
+// 입력 모달 생성
+const modalOverlay = document.createElement('div');
+Object.assign(modalOverlay.style, {
+  position: 'fixed',
+  top: '0',
+  left: '0',
+  width: '100%',
+  height: '100%',
+  background: 'rgba(0,0,0,0.7)',
+  zIndex: '20000',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+});
+
+const modal = document.createElement('div');
+Object.assign(modal.style, {
+  background: 'white',
+  padding: `${isMobile ? '20px' : '30px'}`,
+  borderRadius: '12px',
+  boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+  maxWidth: `${isMobile ? '95%' : '500px'}`,
+  width: '90%',
+  fontFamily: 'Arial, sans-serif',
+  maxHeight: '80vh',
+  overflowY: 'auto'
+});
+
+modal.innerHTML = `
+<h3 style="
+  margin: 0 0 20px 0;
+  color: #333;
+  text-align: center;
+">
+📝 의견 입력
+</h3>
+${agreeBills.length > 0 && disagreeBills.length > 0 ? 
+`<div style="
+  background: #e3f2fd;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+">
+  ℹ️ 찬성 ${agreeBills.length}개, 반대 ${disagreeBills.length}개 법안이 선택되었습니다.
+</div>` : ''
+}
+
+${agreeBills.length > 0 ? `
+<div style="
+  background: #e8f5e8;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #4caf50;
+">
+<h4 style="margin: 0 0 10px 0; color: #2e7d32; font-size: 16px;">
+✅ 찬성 법안 (${agreeBills.length}개)
+</h4>
+<div style="margin-bottom: 10px;">
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+제목:
+</label>
+<input type="text" id="modal-agree-title" 
+       style="
+         width: 100%;
+         padding: 8px;
+         border: 2px solid #ddd;
+         border-radius: 6px;
+         font-size: 14px;
+       "
+       value="이 법안에 찬성합니다">
+</div>
+<div>
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+내용:
+</label>
+<textarea id="modal-agree-content" 
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+          ">국민의 의견을 충분히 수렴한 좋은 입법이라고 생각합니다.</textarea>
+</div>
+</div>
+` : ''}
+
+${disagreeBills.length > 0 ? `
+<div style="
+  background: #ffebee;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #f44336;
+">
+<h4 style="margin: 0 0 10px 0; color: #c62828; font-size: 16px;">
+❌ 반대 법안 (${disagreeBills.length}개)
+</h4>
+<div style="margin-bottom: 10px;">
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+제목:
+</label>
+<input type="text" id="modal-disagree-title" 
+       style="
+         width: 100%;
+         padding: 8px;
+         border: 2px solid #ddd;
+         border-radius: 6px;
+         font-size: 14px;
+       "
+       value="이 법안을 반대합니다">
+</div>
+<div>
+<label style="
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+">
+내용:
+</label>
+<textarea id="modal-disagree-content" 
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+          ">국민의 의견을 충분히 수렴하지 않은 졸속 입법을 반대합니다.</textarea>
+</div>
+</div>
+` : ''}
+
+<div style="
+  background: #fff3e0;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  border-left: 4px solid #ff9800;
+">
+<strong>✨ 스마트 캡차 처리:</strong><br>
+• 캡차 5자리 입력 후 성공하면 → 탭 자동 닫기<br>
+• 실패하면 → 탭 유지하여 다시 입력 가능
+</div>
+<div style="text-align: center;">
+<button id="modal-ok" style="
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+">
+확인 (${selectedBills.length}개 법안)
+</button>
+<button id="modal-cancel" style="
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+">
+취소
+</button>
+</div>
+`;
+
+modalOverlay.appendChild(modal);
+document.body.appendChild(modalOverlay);
+
+// 확인 버튼
+document.getElementById('modal-ok').onclick = () => {
+  const agreeTitleInput = document.getElementById('modal-agree-title')?.value.trim() || '';
+  const agreeContentInput = document.getElementById('modal-agree-content')?.value.trim() || '';
+  const disagreeTitleInput = document.getElementById('modal-disagree-title')?.value.trim() || '';
+  const disagreeContentInput = document.getElementById('modal-disagree-content')?.value.trim() || '';
+
+  // 선택된 법안이 있는데 해당 메시지가 비어있으면 경고
+  if (agreeBills.length > 0 && (!agreeTitleInput || !agreeContentInput)) {
+    alert('찬성 법안의 제목과 내용을 모두 입력해주세요.');
+    return;
+  }
+  
+  if (disagreeBills.length > 0 && (!disagreeTitleInput || !disagreeContentInput)) {
+    alert('반대 법안의 제목과 내용을 모두 입력해주세요.');
+    return;
+  }
+
+  modalOverlay.remove();
+
+  // 찬성 법안들 처리
+  if (agreeBills.length > 0) {
+    localStorage.setItem('autoFillData_agree', JSON.stringify({
+      title: agreeTitleInput,
+      content: agreeContentInput,
+      timestamp: Date.now()
+    }));
+
+    agreeBills.forEach((bill) => {
+      const url = new URL(bill.link);
+      url.searchParams.set('autoTitle', encodeURIComponent(agreeTitleInput));
+      url.searchParams.set('autoContent', encodeURIComponent(agreeContentInput));
+      url.searchParams.set('voteType', 'agree');
+      
+      const link = document.createElement('a');
+      link.href = url.toString();
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
+
+  // 반대 법안들 처리
+  if (disagreeBills.length > 0) {
+    localStorage.setItem('autoFillData_disagree', JSON.stringify({
+      title: disagreeTitleInput,
+      content: disagreeContentInput,
+      timestamp: Date.now()
+    }));
+
+    disagreeBills.forEach((bill) => {
+      const url = new URL(bill.link);
+      url.searchParams.set('autoTitle', encodeURIComponent(disagreeTitleInput));
+      url.searchParams.set('autoContent', encodeURIComponent(disagreeContentInput));
+      url.searchParams.set('voteType', 'disagree');
+      
+      const link = document.createElement('a');
+      link.href = url.toString();
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
+};
+
+// 취소 버튼
+document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
+};
 }
 
 // 국회 의견 등록 사이트에서의 동작
