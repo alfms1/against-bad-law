@@ -60,36 +60,92 @@ function showCaptchaErrorNotification(errorMsg) {
       document.body.removeChild(notification);
     }
   }, 7000);
-}javascript:(function() {
+}
+
+javascript:(async function() {
 const currentDomain = window.location.hostname;
-// console.log('🎯 범용 북마클릿 실행 - 도메인:', currentDomain);
 
 // VForKorea 사이트에서의 동작
 if (currentDomain === 'vforkorea.com') {
-// console.log('📍 VForKorea 사이트 감지 - 의견 등록 시스템 실행');
 
 // 기존 패널 제거
 const existingPanel = document.querySelector('#vote-control-panel');
 if (existingPanel) existingPanel.remove();
 
-// 1. 오늘 마감된 행들 찾기
+// 로딩 알림 표시
+const loadingNotification = document.createElement('div');
+Object.assign(loadingNotification.style, {
+  position: 'fixed',
+  top: '20px',
+  right: '20px',
+  background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+  color: 'white',
+  padding: '15px 20px',
+  borderRadius: '8px',
+  zIndex: '999999',
+  fontFamily: 'Arial, sans-serif',
+  boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+  fontSize: '14px'
+});
+loadingNotification.innerHTML = '🔄 모든 법안 로딩 중...';
+document.body.appendChild(loadingNotification);
+
+// 1. 모든 법안 로딩 함수
+async function loadAllBills() {
+  let previousCount = 0;
+  let currentCount = 0;
+  let noChangeCount = 0;
+  
+  while (noChangeCount < 3) {
+    // 현재 법안 수 확인
+    currentCount = document.querySelectorAll('tr[data-idx]').length;
+    
+    // 페이지 끝까지 스크롤
+    window.scrollTo(0, document.body.scrollHeight);
+    
+    // 잠시 대기 (새 콘텐츠 로딩 시간)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // 변화가 없으면 카운트 증가
+    if (currentCount === previousCount) {
+      noChangeCount++;
+    } else {
+      noChangeCount = 0;
+    }
+    
+    previousCount = currentCount;
+    
+    // 로딩 상태 업데이트
+    loadingNotification.innerHTML = `🔄 법안 로딩 중... (${currentCount}개 발견)`;
+  }
+  
+  return currentCount;
+}
+
+// 모든 법안 로딩 후 오늘 마감 찾기
+const totalLoaded = await loadAllBills();
+loadingNotification.innerHTML = `✅ 총 ${totalLoaded}개 법안 로딩 완료!`;
+
+// 2. 오늘 마감된 행들 찾기
 const todayRows = [...document.querySelectorAll('tr[data-idx]')].filter(tr => {
 const redSpan = tr.querySelector('td span.red');
 const isToday = redSpan && redSpan.textContent.trim() === '오늘 마감';
-// if (isToday) {
-// console.log('오늘 마감 법안 발견:', tr.querySelector('.content .t')?.textContent);
-// }
 return isToday;
 });
 
-// console.log(`총 ${todayRows.length}개의 오늘 마감 법안을 찾았습니다.`);
+// 로딩 알림 제거
+setTimeout(() => {
+  if (document.body.contains(loadingNotification)) {
+    document.body.removeChild(loadingNotification);
+  }
+}, 2000);
 
 if (!todayRows.length) {
-alert('오늘 마감된 법안이 없습니다.');
+alert(`전체 ${totalLoaded}개 법안 중 오늘 마감된 법안이 없습니다.`);
 return;
 }
 
-// 2. 컨트롤 패널 생성 (모바일 최적화)
+// 3. 컨트롤 패널 생성 (모바일 최적화)
 const controlPanel = document.createElement('div');
 controlPanel.id = 'vote-control-panel';
 const isMobile = window.innerWidth <= 768;
@@ -111,7 +167,7 @@ fontFamily: 'Arial, sans-serif',
 fontSize: isMobile ? '16px' : '14px'
 });
 
-// 3. 헤더
+// 4. 헤더
 const header = document.createElement('div');
 header.innerHTML = `
 <h3 style="margin: 0 0 15px 0; color: #333;">📝 오늘 마감 법안 (${todayRows.length}건)</h3>
@@ -123,7 +179,7 @@ header.innerHTML = `
 `;
 controlPanel.appendChild(header);
 
-// 4. 각 법안별 컨트롤 생성
+// 5. 각 법안별 컨트롤 생성
 const billsList = document.createElement('div');
 const bills = [];
 
@@ -132,7 +188,6 @@ const titleElement = tr.querySelector('.content .t');
 const voteLink = tr.querySelector('a[href*="forInsert.do"]');
 
 if (!titleElement || !voteLink) {
-// console.warn('필요한 요소를 찾을 수 없습니다:', tr);
 return;
 }
 
@@ -206,7 +261,7 @@ element: billItem
 
 controlPanel.appendChild(billsList);
 
-// 5. 실행 버튼들
+// 6. 실행 버튼들
 const actionButtons = document.createElement('div');
 actionButtons.innerHTML = `
 <div style="
@@ -253,10 +308,7 @@ actionButtons.innerHTML = `
 controlPanel.appendChild(actionButtons);
 document.body.appendChild(controlPanel);
 
-// 마지막 선택 추적 변수
-let lastSelectedVote = null;
-
-// 6. 이벤트 리스너들
+// 7. 이벤트 리스너들
 
 // 개별 투표 버튼
 controlPanel.addEventListener('click', (e) => {
@@ -265,7 +317,6 @@ const index = parseInt(e.target.dataset.index);
 const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
 
 bills[index].vote = voteType;
-lastSelectedVote = voteType;
 
 const statusSpan = controlPanel.querySelector(`span[data-index="${index}"]`);
 statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
@@ -320,8 +371,7 @@ document.getElementById('clear-all').onclick = () => {
     const billDiv = bill.element;
     const buttons = billDiv.querySelectorAll('.vote-btn');
     buttons.forEach(btn => {
-      btn.style.opacity = '1'; // 모든 버튼의 불투명도를 1로 재설정
-      // 버튼 스타일 원상복구
+      btn.style.opacity = '1';
       if (btn.classList.contains('agree')) {
         btn.style.background = '#2e7d32';
         btn.style.color = 'white';
@@ -567,20 +617,6 @@ document.getElementById('modal-ok').onclick = () => {
     return;
   }
 
-  // --- alert 후킹 시작 ---
-  let alertTriggered = false;
-  const originalAlert = window.alert;
-  window.alert = function(msg) {
-    alertTriggered = true;
-    // pal.assembly.go.kr 등에서 alert 발생 시 자동으로 창 닫기
-    setTimeout(() => {
-      window.alert = originalAlert; // 원복
-      try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-    }, 100);
-    return originalAlert.call(this, msg);
-  };
-  // --- alert 후킹 끝 ---
-
   modalOverlay.remove();
 
   // 찬성 법안들 처리
@@ -630,24 +666,17 @@ document.getElementById('modal-ok').onclick = () => {
       document.body.removeChild(link);
     });
   }
-
-  // 혹시 alert가 한 번도 발생하지 않았다면 원복
-  setTimeout(() => { window.alert = originalAlert; }, 2000);
 };
 
 // 취소 버튼
 document.getElementById('modal-cancel').onclick = () => modalOverlay.remove();
 };
-
-// console.log('✅ VForKorea 의견 등록 시스템 준비 완료');
 }
 
-// 국회 의견 등록 사이트에서의 동작 (스마트 캡차 처리 포함)
+// 국회 의견 등록 사이트에서의 동작
 else if (currentDomain === 'pal.assembly.go.kr') {
-// console.log('   국회 의견 등록 사이트 감지 - 스마트 자동 입력 실행');
 
 // LocalStorage에서 데이터 읽기
-const storedData = localStorage.getItem('autoFillData');
 const storedAgreeData = localStorage.getItem('autoFillData_agree');
 const storedDisagreeData = localStorage.getItem('autoFillData_disagree');
 
@@ -658,31 +687,21 @@ let autoContent = '';
 const urlParams = new URLSearchParams(location.search);
 const voteType = urlParams.get('voteType');
 
-// console.log('🔍 감지된 투표 타입:', voteType);
-
 // voteType에 따라 적절한 데이터 로드
 if (voteType === 'agree' && storedAgreeData) {
 const data = JSON.parse(storedAgreeData);
 autoTitle = data.title || '';
 autoContent = data.content || '';
-// console.log('📦 찬성 데이터 로드:', { autoTitle, autoContent });
 } else if (voteType === 'disagree' && storedDisagreeData) {
 const data = JSON.parse(storedDisagreeData);
 autoTitle = data.title || '';
 autoContent = data.content || '';
-// console.log('📦 반대 데이터 로드:', { autoTitle, autoContent });
-} else if (storedData) {
-const data = JSON.parse(storedData);
-autoTitle = data.title || '';
-autoContent = data.content || '';
-// console.log('📦 기존 데이터 로드:', { autoTitle, autoContent });
 }
 
 // URL 파라미터에서도 읽기 (최종 백업)
 if (!autoTitle || !autoContent) {
 autoTitle = autoTitle || decodeURIComponent(urlParams.get('autoTitle') || '');
 autoContent = autoContent || decodeURIComponent(urlParams.get('autoContent') || '');
-// console.log('🔗 URL 파라미터에서 데이터 로드:', { autoTitle, autoContent });
 }
 
 if (!autoTitle && !autoContent) {
@@ -696,24 +715,16 @@ const titleField = document.querySelector('#txt_sj');
 const contentField = document.querySelector('#txt_cn');
 const captchaField = document.querySelector('#catpchaAnswer');
 
-// console.log('📋 필드 확인:', {
-// titleField: !!titleField,
-// contentField: !!contentField,
-// captchaField: !!captchaField
-// });
-
 if (titleField && autoTitle) {
 titleField.value = autoTitle;
 titleField.dispatchEvent(new Event('input', { bubbles: true }));
 titleField.dispatchEvent(new Event('keyup', { bubbles: true }));
-// console.log('✅ 제목 입력 완료');
 }
 
 if (contentField && autoContent) {
 contentField.value = autoContent;
 contentField.dispatchEvent(new Event('input', { bubbles: true }));
 contentField.dispatchEvent(new Event('keyup', { bubbles: true }));
-// console.log('✅ 내용 입력 완료');
 }
 
 if (captchaField) {
@@ -730,12 +741,10 @@ let isSubmitting = false; // 중복 제출 방지
 
 captchaField.addEventListener('input', function() {
   const value = this.value.trim();
-  // console.log('🔤 캡차 입력 중:', value);
   
   // 5자리 숫자 입력 완료시
   if (/^\d{5}$/.test(value) && !isSubmitting) {
     isSubmitting = true;
-    // console.log('🎯 캡차 5자리 완료, 제출 시도:', value);
     
     // 시각적 피드백
     this.style.background = '#e8f5e8';
@@ -749,7 +758,6 @@ captchaField.addEventListener('input', function() {
         }
         
         if (typeof validate === 'function' && !validate()) {
-          // console.log('❌ 유효성 검사 실패');
           isSubmitting = false;
           captchaField.style.background = '#ffebee';
           captchaField.style.borderColor = '#f44336';
@@ -764,7 +772,6 @@ captchaField.addEventListener('input', function() {
         // 제출 시도
         if (typeof checkWebFilter === 'function' && typeof $ !== 'undefined') {
           checkWebFilter($('#frm'));
-          // console.log('📤 폼 제출 완료 - 결과 대기 중...');
           
           // 제출 후 결과 확인 (3초 대기)
           setTimeout(() => {
@@ -776,7 +783,6 @@ captchaField.addEventListener('input', function() {
           const submitBtn = document.getElementById('btn_opnReg');
           if (submitBtn) {
             submitBtn.click();
-            // console.log('🖱️ 수동 버튼 클릭으로 제출');
             
             setTimeout(() => {
               checkSubmissionResult();
@@ -785,7 +791,6 @@ captchaField.addEventListener('input', function() {
         }
         
       } catch (e) {
-        // console.error('❌ 제출 중 오류:', e);
         isSubmitting = false;
         captchaField.style.background = '#ffebee';
         captchaField.style.borderColor = '#f44336';
@@ -796,8 +801,6 @@ captchaField.addEventListener('input', function() {
 
 // 제출 결과 확인 함수
 function checkSubmissionResult() {
-  // console.log('🔍 제출 결과 확인 시작...');
-  
   // 1단계: 정확한 에러 메시지 확인 (최우선)
   let errorMessage = null;
   
@@ -812,7 +815,6 @@ function checkSubmissionResult() {
         text.includes('방지 문자가 일치하지') ||
         text.includes('일치하지 않습니다')) {
       errorMessage = text;
-      // console.log('🚫 정확한 캡차 에러 감지:', text);
       break;
     }
     
@@ -829,28 +831,7 @@ function checkSubmissionResult() {
     
     if (hasError && text.length > 5 && text.length < 100) {
       errorMessage = text;
-      // console.log('🚫 캡차 관련 에러 감지:', text);
       break;
-    }
-  }
-  
-  // 2단계: alert 메시지 확인
-  if (!errorMessage) {
-    // alert 후킹해서 확인
-    const originalAlert = window.alert;
-    let capturedAlert = null;
-    
-    window.alert = function(msg) {
-      capturedAlert = msg;
-      // console.log('🚨 Alert 메시지 캡처:', msg);
-      return originalAlert.call(this, msg);
-    };
-    
-    if (capturedAlert && 
-        (capturedAlert.includes('중복 방지') || 
-         capturedAlert.includes('일치하지') ||
-         capturedAlert.includes('방지문자'))) {
-      errorMessage = capturedAlert;
     }
   }
   
@@ -862,7 +843,6 @@ function checkSubmissionResult() {
     const currentUrl = window.location.href;
     if (currentUrl.includes('complete') || currentUrl.includes('success')) {
       successMessage = 'URL 변경으로 성공 감지';
-      // console.log('✅ URL 성공 감지:', currentUrl);
     }
     
     // 성공 메시지 확인
@@ -876,23 +856,15 @@ function checkSubmissionResult() {
             !text.includes('중복 방지') && !text.includes('일치하지') && 
             !text.includes('틀렸') && text.length < 100) {
           successMessage = text;
-          // console.log('✅ 성공 메시지 발견:', text);
           break;
         }
       }
     }
   }
   
-  // console.log('📊 최종 판정:', {
-  //   errorMessage,
-  //   successMessage,
-  //   url: window.location.href
-  // });
-  
   // 4단계: 최종 결정 (에러 메시지가 있으면 무조건 실패!)
   if (errorMessage) {
     // ❌ "중복 방지 문자가 일치하지 않습니다" 감지 - 탭 유지!
-    // console.log('❌ 캡차 오류 확정! 탭 유지하고 재입력 대기');
     isSubmitting = false;
     
     // 캡차 필드 초기화
@@ -913,23 +885,18 @@ function checkSubmissionResult() {
     
   } else if (successMessage) {
     // 🎉 에러 없고 성공 메시지만 있으면 탭 닫기!
-    // console.log('🎉 진짜 성공! 탭을 닫습니다...');
-    
     showSuccessNotification();
     
     setTimeout(() => {
       try {
         window.close();
-        // console.log('🚪 탭 닫기 성공');
       } catch (e) {
-        // console.log('🚪 탭 닫기 실패, about:blank로 이동');
         window.location.href = 'about:blank';
       }
     }, 1500);
     
   } else {
     // 🤔 아직 결과가 불분명하면 조금 더 기다리기
-    // console.log('🤔 결과 대기 중... 3초 후 재확인');
     setTimeout(() => {
       checkSubmissionResult();
     }, 3000);
@@ -965,68 +932,8 @@ function showSuccessNotification() {
   document.body.appendChild(notification);
 }
 
-// 알 수 없는 Alert 메시지 알림
-function showUnknownAlertNotification(alertMessage) {
-const notification = document.createElement('div');
-Object.assign(notification.style, {
-  position: 'fixed',
-  top: '20px',
-  right: '20px',
-  background: 'linear-gradient(135deg, #ff9800, #f57c00)',
-  color: 'white',
-  padding: '15px 20px',
-  borderRadius: '8px',
-  zIndex: '999999',
-  fontFamily: 'Arial, sans-serif',
-  boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-  fontSize: '14px',
-  maxWidth: '350px'
-});
-
-notification.innerHTML = `
-  <div style="font-weight: bold; margin-bottom: 8px;">⚠️ 알 수 없는 메시지</div>
-  <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px; background: rgba(255,255,255,0.1); padding: 6px; border-radius: 4px;">"${alertMessage.substring(0, 60)}${alertMessage.length > 60 ? '...' : ''}"</div>
-  <div style="font-size: 13px; opacity: 0.9;">탭을 유지하고 상황을 확인해주세요.</div>
-  <button onclick="this.parentElement.remove()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">✕</button>
-`;
-
-document.body.appendChild(notification);
-
-setTimeout(() => {
-  if (document.body.contains(notification)) {
-    document.body.removeChild(notification);
-  }
-}, 5000);
-}
-
 captchaField._smartCaptchaSet = true;
 }
-}
-
-// pal.assembly.go.kr에서만 실행
-if (currentDomain === 'pal.assembly.go.kr') {
-  // confirm 후킹: 특정 메시지면 자동 취소 + 탭 닫기
-  const originalConfirm = window.confirm;
-  window.confirm = function(msg) {
-    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
-      setTimeout(() => {
-        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-      }, 200);
-      return false; // '취소' 선택
-    }
-    return originalConfirm.call(this, msg);
-  };
-
-  // alert도 혹시 모르니 후킹
-  const originalAlert = window.alert;
-  window.alert = function(msg) {
-    if (msg && msg.includes('이미 의견을 등록하셨습니다')) {
-      setTimeout(() => {
-        try { window.close(); } catch (e) { window.location.href = 'about:blank'; }
-      }, 200);
-    }
-    return originalAlert.call(this, msg);
-  };
 }
 
 // 초기 성공 알림
@@ -1071,13 +978,10 @@ executeAutoFill();
 window.addEventListener('load', executeAutoFill);
 setTimeout(executeAutoFill, 2000);
 }
-
-// console.log('✅ 국회 사이트 스마트 자동 입력 준비 완료');
 }
 
 // 기타 사이트
 else {
-// console.log('❓ 지원하지 않는 사이트:', currentDomain);
 alert('이 북마클릿은 VForKorea와 국회 의견 등록 사이트에서만 작동합니다.');
 }
 })();
