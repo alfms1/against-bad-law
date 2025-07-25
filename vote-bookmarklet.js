@@ -140,50 +140,38 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
   let dateCategory = '📋 마감 정보 없음';
   let isToday = false;
   let dateSpan = null;
-  let spanClass = 'none';
   
-  // 해당 행의 모든 td 요소를 확인
-  const tds = tr.querySelectorAll('td');
+  // 각 클래스별로 span 찾기
+  const redSpan = tr.querySelector('td span.red');
+  const orangeSpan = tr.querySelector('td span.orange');
+  const graySpan = tr.querySelector('td span.gray');
   
-  for (let td of tds) {
-    // 각 td 안에서 span 요소들 확인
-    const redSpan = td.querySelector('span.red');
-    const orangeSpan = td.querySelector('span.orange');
-    const graySpan = td.querySelector('span.gray');
-    
-    if (redSpan) {
-      const dateText = redSpan.textContent.trim();
-      if (dateText === '오늘 마감') {
-        dateCategory = '🔥 오늘 마감';
-        isToday = true;
-      } else if (dateText && dateText.trim() !== '') {
-        dateCategory = `🔴 ${dateText}`;
-      }
-      dateSpan = redSpan;
-      spanClass = 'red';
-      break;
-    } else if (orangeSpan) {
-      const dateText = orangeSpan.textContent.trim();
-      if (dateText === '내일 마감') {
-        dateCategory = '⏰ 내일 마감';
-      } else if (dateText && dateText.trim() !== '') {
-        dateCategory = `🟠 ${dateText}`;
-      }
-      dateSpan = orangeSpan;
-      spanClass = 'orange';
-      break;
-    } else if (graySpan) {
-      const dateText = graySpan.textContent.trim();
-      if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        // YYYY-MM-DD 형식의 날짜
-        dateCategory = `📅 ${dateText}`;
-      } else if (dateText && dateText.trim() !== '') {
-        dateCategory = `⚫ ${dateText}`;
-      }
-      dateSpan = graySpan;
-      spanClass = 'gray';
-      break;
+  if (redSpan) {
+    const dateText = redSpan.textContent.trim();
+    if (dateText === '오늘 마감') {
+      dateCategory = '🔥 오늘 마감';
+      isToday = true;
+    } else if (dateText && dateText.trim() !== '') {
+      dateCategory = `🔴 ${dateText}`;
     }
+    dateSpan = redSpan;
+  } else if (orangeSpan) {
+    const dateText = orangeSpan.textContent.trim();
+    if (dateText === '내일 마감') {
+      dateCategory = '⏰ 내일 마감';
+    } else if (dateText && dateText.trim() !== '') {
+      dateCategory = `🟠 ${dateText}`;
+    }
+    dateSpan = orangeSpan;
+  } else if (graySpan) {
+    const dateText = graySpan.textContent.trim();
+    if (dateText.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // YYYY-MM-DD 형식의 날짜
+      dateCategory = `📅 ${dateText}`;
+    } else if (dateText && dateText.trim() !== '') {
+      dateCategory = `⚫ ${dateText}`;
+    }
+    dateSpan = graySpan;
   }
   
   const billData = {
@@ -193,7 +181,9 @@ document.querySelectorAll('tr[data-idx]').forEach(tr => {
     dateCategory: dateCategory,
     isToday: isToday,
     originalDateText: dateSpan ? dateSpan.textContent.trim() : '',
-    spanClass: spanClass
+    spanClass: dateSpan ? (dateSpan.classList.contains('red') ? 'red' : 
+                          dateSpan.classList.contains('orange') ? 'orange' : 
+                          dateSpan.classList.contains('gray') ? 'gray' : 'none') : 'none'
   };
   
   allBills.push(billData);
@@ -362,7 +352,6 @@ function renderBills(billsToShow) {
   
   billsToShow.forEach((bill, index) => {
     const shortTitle = bill.title.length > 50 ? bill.title.substring(0, 50) + '...' : bill.title;
-    const currentVote = billStates[bill.link];
     
     const billItem = document.createElement('div');
     Object.assign(billItem.style, {
@@ -402,7 +391,6 @@ function renderBills(billsToShow) {
       border-radius: 4px;
       cursor: pointer;
       font-size: 12px;
-      opacity: ${currentVote === 'agree' ? '1' : (currentVote === 'disagree' ? '0.5' : '1')};
     ">
     찬성
     </button>
@@ -414,7 +402,6 @@ function renderBills(billsToShow) {
       border-radius: 4px;
       cursor: pointer;
       font-size: 12px;
-      opacity: ${currentVote === 'disagree' ? '1' : (currentVote === 'agree' ? '0.5' : '1')};
     ">
     반대
     </button>
@@ -422,12 +409,27 @@ function renderBills(billsToShow) {
       margin-left: 8px;
       font-weight: bold;
       font-size: 12px;
-      color: ${currentVote === 'agree' ? '#2e7d32' : (currentVote === 'disagree' ? '#c62828' : '#666')};
     ">
-    ${currentVote === 'agree' ? '찬성' : (currentVote === 'disagree' ? '반대' : '미선택')}
+    ${billStates[bill.link] ? (billStates[bill.link] === 'agree' ? '찬성' : '반대') : '미선택'}
     </span>
     </div>
     `;
+
+    // 기존 상태 복원
+    if (billStates[bill.link]) {
+      const buttons = billItem.querySelectorAll('.vote-btn');
+      buttons.forEach(btn => {
+        if ((billStates[bill.link] === 'agree' && btn.classList.contains('agree')) ||
+            (billStates[bill.link] === 'disagree' && btn.classList.contains('disagree'))) {
+          btn.style.opacity = '1';
+        } else {
+          btn.style.opacity = '0.5';
+        }
+      });
+      
+      const statusSpan = billItem.querySelector('.vote-status');
+      statusSpan.style.color = billStates[bill.link] === 'agree' ? '#2e7d32' : '#c62828';
+    }
 
     billsList.appendChild(billItem);
   });
@@ -458,8 +460,15 @@ const voteType = e.target.classList.contains('agree') ? 'agree' : 'disagree';
 // 상태 저장
 billStates[billId] = voteType;
 
-// 즉시 렌더링 업데이트
-renderBills(currentBills);
+const statusSpan = controlPanel.querySelector(`span[data-bill-id="${billId}"]`);
+statusSpan.textContent = voteType === 'agree' ? '찬성' : '반대';
+statusSpan.style.color = voteType === 'agree' ? '#2e7d32' : '#c62828';
+
+const billDiv = e.target.closest('div[style*="margin-bottom: 12px"]');
+const buttons = billDiv.querySelectorAll('.vote-btn');
+buttons.forEach(btn => {
+btn.style.opacity = btn === e.target ? '1' : '0.5';
+});
 }
 });
 
@@ -841,6 +850,7 @@ captchaField.style.textAlign = 'center';
 // 스마트 캡차 처리 설정 (중복 방지)
 if (!captchaField._smartCaptchaSet) {
 let isSubmitting = false; // 중복 제출 방지
+let submitAttempts = 0; // 제출 시도 횟수 추적
 
 captchaField.addEventListener('input', function() {
   const value = this.value.trim();
@@ -848,62 +858,109 @@ captchaField.addEventListener('input', function() {
   // 5자리 숫자 입력 완료시
   if (/^\d{5}$/.test(value) && !isSubmitting) {
     isSubmitting = true;
+    submitAttempts++;
     
     // 시각적 피드백
     this.style.background = '#e8f5e8';
     this.style.borderColor = '#4caf50';
     
+    // 디버깅용 로그
+    console.log(`[캡차 제출 시도 #${submitAttempts}] 입력값: ${value}`);
+    
+    // 더 긴 대기 시간 (페이지 안정화)
     setTimeout(() => {
       try {
-        // 기존 함수들 호출 (사이트 내장 함수)
-        if (typeof trimAllInputText === 'function') {
-          trimAllInputText();
-        }
+        // 1단계: 폼 필드 최종 검증
+        const titleField = document.querySelector('#txt_sj');
+        const contentField = document.querySelector('#txt_cn');
         
-        if (typeof validate === 'function' && !validate()) {
+        if (!titleField || !titleField.value.trim()) {
+          console.log('[캡차 제출 실패] 제목 필드가 비어있음');
           isSubmitting = false;
-          captchaField.style.background = '#ffebee';
-          captchaField.style.borderColor = '#f44336';
+          this.style.background = '#ffebee';
+          this.style.borderColor = '#f44336';
+          alert('제목을 입력해주세요.');
           return;
         }
         
-        // 로딩 표시
+        if (!contentField || !contentField.value.trim()) {
+          console.log('[캡차 제출 실패] 내용 필드가 비어있음');
+          isSubmitting = false;
+          this.style.background = '#ffebee';
+          this.style.borderColor = '#f44336';
+          alert('내용을 입력해주세요.');
+          return;
+        }
+        
+        // 2단계: 기존 함수들 호출 (사이트 내장 함수)
+        if (typeof trimAllInputText === 'function') {
+          console.log('[캡차 제출] trimAllInputText 실행');
+          trimAllInputText();
+        }
+        
+        // 3단계: 폼 검증
+        if (typeof validate === 'function') {
+          console.log('[캡차 제출] validate 함수 실행');
+          const validationResult = validate();
+          if (!validationResult) {
+            console.log('[캡차 제출 실패] 폼 검증 실패');
+            isSubmitting = false;
+            this.style.background = '#ffebee';
+            this.style.borderColor = '#f44336';
+            return;
+          }
+          console.log('[캡차 제출] 폼 검증 통과');
+        }
+        
+        // 4단계: 로딩 표시
         if (typeof $ !== 'undefined' && $('.loading_bar').length) {
           $('.loading_bar').show();
         }
         
-        // 제출 시도
+        // 5단계: 제출 시도 (더 신중하게)
+        console.log('[캡차 제출] 실제 제출 시작');
+        
         if (typeof checkWebFilter === 'function' && typeof $ !== 'undefined') {
+          console.log('[캡차 제출] checkWebFilter 방식으로 제출');
           checkWebFilter($('#frm'));
           
-          // 제출 후 결과 확인 (3초 대기)
+          // 제출 후 결과 확인 (더 긴 대기 시간)
           setTimeout(() => {
             checkSubmissionResult();
-          }, 3000);
+          }, 4000); // 3초 → 4초로 증가
           
         } else {
           // 대체 제출 방법
+          console.log('[캡차 제출] 버튼 클릭 방식으로 제출');
           const submitBtn = document.getElementById('btn_opnReg');
           if (submitBtn) {
             submitBtn.click();
             
             setTimeout(() => {
               checkSubmissionResult();
-            }, 3000);
+            }, 4000); // 3초 → 4초로 증가
+          } else {
+            console.log('[캡차 제출 실패] 제출 버튼을 찾을 수 없음');
+            isSubmitting = false;
+            this.style.background = '#ffebee';
+            this.style.borderColor = '#f44336';
           }
         }
         
       } catch (e) {
+        console.error('[캡차 제출 에러]', e);
         isSubmitting = false;
-        captchaField.style.background = '#ffebee';
-        captchaField.style.borderColor = '#f44336';
+        this.style.background = '#ffebee';
+        this.style.borderColor = '#f44336';
       }
-    }, 1200);
+    }, 1000); // 500ms → 1000ms로 증가
   }
 });
 
 // 제출 결과 확인 함수
 function checkSubmissionResult() {
+  console.log('[결과 확인] 제출 결과 확인 시작');
+  
   // 1단계: 정확한 에러 메시지 확인 (최우선)
   let errorMessage = null;
   
@@ -918,6 +975,7 @@ function checkSubmissionResult() {
         text.includes('방지 문자가 일치하지') ||
         text.includes('일치하지 않습니다')) {
       errorMessage = text;
+      console.log(`[결과 확인] 캡차 에러 감지: ${text}`);
       break;
     }
     
@@ -934,18 +992,24 @@ function checkSubmissionResult() {
     
     if (hasError && text.length > 5 && text.length < 100) {
       errorMessage = text;
+      console.log(`[결과 확인] 에러 패턴 감지: ${text}`);
       break;
     }
   }
+  
+  // 2단계: 페이지 변화 확인 (새로운 추가)
+  const currentUrl = window.location.href;
+  console.log(`[결과 확인] 현재 URL: ${currentUrl}`);
   
   // 3단계: 성공 확인 (에러가 없을 때만!)
   let successMessage = null;
   
   if (!errorMessage) {
     // URL 변경 확인
-    const currentUrl = window.location.href;
-    if (currentUrl.includes('complete') || currentUrl.includes('success')) {
+    if (currentUrl.includes('complete') || currentUrl.includes('success') || 
+        currentUrl.includes('result') || currentUrl.includes('finish')) {
       successMessage = 'URL 변경으로 성공 감지';
+      console.log('[결과 확인] URL 변경으로 성공 감지');
     }
     
     // 성공 메시지 확인
@@ -955,10 +1019,12 @@ function checkSubmissionResult() {
         
         // 성공 메시지들 (에러 키워드가 없는 경우만)
         if ((text.includes('완료') || text.includes('성공') || 
-             text.includes('등록되었습니다') || text.includes('접수되었습니다')) &&
+             text.includes('등록되었습니다') || text.includes('접수되었습니다') ||
+             text.includes('저장되었습니다') || text.includes('처리되었습니다')) &&
             !text.includes('중복 방지') && !text.includes('일치하지') && 
             !text.includes('틀렸') && text.length < 100) {
           successMessage = text;
+          console.log(`[결과 확인] 성공 메시지 감지: ${text}`);
           break;
         }
       }
@@ -968,6 +1034,7 @@ function checkSubmissionResult() {
   // 4단계: 최종 결정 (에러 메시지가 있으면 무조건 실패!)
   if (errorMessage) {
     // ❌ "중복 방지 문자가 일치하지 않습니다" 감지 - 탭 유지!
+    console.log(`[결과 확인] 실패 처리: ${errorMessage}`);
     isSubmitting = false;
     
     // 캡차 필드 초기화
@@ -987,7 +1054,8 @@ function checkSubmissionResult() {
     showCaptchaErrorNotification(errorMessage);
     
   } else if (successMessage) {
-    // 에러 없고 성공 메시지만 있으면 탭 닫기!
+    // 🎉 에러 없고 성공 메시지만 있으면 탭 닫기!
+    console.log(`[결과 확인] 성공 처리: ${successMessage}`);
     showSuccessNotification();
     
     setTimeout(() => {
@@ -999,10 +1067,21 @@ function checkSubmissionResult() {
     }, 1500);
     
   } else {
-    // 아직 결과가 불분명하면 조금 더 기다리기
-    setTimeout(() => {
-      checkSubmissionResult();
-    }, 3000);
+    // 🤔 아직 결과가 불분명하면 조금 더 기다리기 (최대 3번까지)
+    console.log('[결과 확인] 결과 불분명, 재시도 대기');
+    
+    if (submitAttempts <= 3) {
+      setTimeout(() => {
+        checkSubmissionResult();
+      }, 2000); // 3초 → 2초로 단축하되 더 자주 체크
+    } else {
+      console.log('[결과 확인] 최대 재시도 횟수 초과, 수동 확인 필요');
+      isSubmitting = false;
+      if (captchaField) {
+        captchaField.style.background = '#fff3e0';
+        captchaField.style.borderColor = '#ff9800';
+      }
+    }
   }
 }
 
@@ -1074,13 +1153,86 @@ notification.innerHTML = `
 document.body.appendChild(notification);
 }
 
-// 페이지 로딩 완료 후 실행
-if (document.readyState === 'complete') {
-executeAutoFill();
-} else {
-window.addEventListener('load', executeAutoFill);
-setTimeout(executeAutoFill, 2000);
+// 개선된 페이지 로딩 완료 후 실행
+function waitForPageReady() {
+  return new Promise((resolve) => {
+    if (document.readyState === 'complete') {
+      console.log('[페이지 로딩] 이미 완료됨');
+      resolve();
+    } else {
+      console.log('[페이지 로딩] 대기 중...');
+      
+      const checkReady = () => {
+        if (document.readyState === 'complete') {
+          console.log('[페이지 로딩] 완료됨');
+          resolve();
+        } else {
+          setTimeout(checkReady, 100);
+        }
+      };
+      
+      window.addEventListener('load', resolve);
+      setTimeout(resolve, 5000); // 최대 5초 대기
+      checkReady();
+    }
+  });
 }
+
+// 캡차 필드가 실제로 존재할 때까지 대기
+function waitForCaptchaField() {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 50; // 5초간 시도
+    
+    const checkField = () => {
+      const captchaField = document.querySelector('#catpchaAnswer');
+      if (captchaField) {
+        console.log('[캡차 필드] 발견됨');
+        resolve(captchaField);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(checkField, 100);
+      } else {
+        console.log('[캡차 필드] 타임아웃');
+        resolve(null);
+      }
+    };
+    
+    checkField();
+  });
+}
+
+// 안전한 자동 입력 실행
+async function safeExecuteAutoFill() {
+  try {
+    console.log('[자동 입력] 시작');
+    
+    // 1단계: 페이지 로딩 대기
+    await waitForPageReady();
+    
+    // 2단계: 추가 안정화 대기
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // 3단계: 캡차 필드 대기
+    const captchaField = await waitForCaptchaField();
+    
+    if (!captchaField) {
+      console.log('[자동 입력] 캡차 필드를 찾을 수 없음');
+      return;
+    }
+    
+    // 4단계: 자동 입력 실행
+    executeAutoFill();
+    
+  } catch (error) {
+    console.error('[자동 입력] 에러:', error);
+    // 에러가 발생해도 기본 실행은 시도
+    setTimeout(executeAutoFill, 3000);
+  }
+}
+
+// 개선된 실행
+safeExecuteAutoFill();
 }
 
 // 기타 사이트
