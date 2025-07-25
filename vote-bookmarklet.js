@@ -987,7 +987,7 @@ function checkSubmissionResult() {
     showCaptchaErrorNotification(errorMessage);
     
   } else if (successMessage) {
-    // 🎉 에러 없고 성공 메시지만 있으면 탭 닫기!
+    // 에러 없고 성공 메시지만 있으면 탭 닫기!
     showSuccessNotification();
     
     setTimeout(() => {
@@ -999,7 +999,7 @@ function checkSubmissionResult() {
     }, 1500);
     
   } else {
-    // 🤔 아직 결과가 불분명하면 조금 더 기다리기
+    // 아직 결과가 불분명하면 조금 더 기다리기
     setTimeout(() => {
       checkSubmissionResult();
     }, 3000);
