@@ -898,7 +898,7 @@ captchaField.addEventListener('input', function() {
         captchaField.style.background = '#ffebee';
         captchaField.style.borderColor = '#f44336';
       }
-    }, 500);
+    }, 1200);
   }
 });
 
