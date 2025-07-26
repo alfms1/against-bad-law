@@ -9,7 +9,7 @@
 </head>
 <body>
   <h1>📢 Vote Assistant</h1>
-  <p>국회 법안 찬반 페이지에서 실행해 주세요</p>
+  <p>※ 국회 법안 페이지에서 실행하세요</p>
   <button onclick="loadScript()">🚀 자동입력 실행</button>
 
   <script>
@@ -17,6 +17,18 @@
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/gh/alfms1/against-bad-law@main/vote-bookmarklet.js?cb=" + Date.now();
       document.body.appendChild(s);
+    }
+  </script>
+
+  <script>
+    // 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(reg) {
+          console.log('✅ Service Worker 등록됨');
+        }).catch(function(err) {
+          console.log('❌ Service Worker 등록 실패:', err);
+        });
     }
   </script>
 </body>
